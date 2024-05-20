@@ -1,4 +1,5 @@
 """Common utilities in Spark that can be used across the project."""
+
 from __future__ import annotations
 
 import re
@@ -363,6 +364,7 @@ def order_array_of_structs_by_field(column_name: str, field_name: str) -> Column
         array_sort(
         {column_name},
         (left, right) -> case
+                        when left.{field_name} is null and right.{field_name} is null then 0
                         when left.{field_name} is null then 1
                         when right.{field_name} is null then -1
                         when left.{field_name} < right.{field_name} then 1
