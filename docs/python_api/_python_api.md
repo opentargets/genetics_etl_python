@@ -10,3 +10,4 @@ The overall architecture of the package distinguishes between:
 - [**Datasets**](datasets/_datasets.md): data model
 - [**Methods**](methods/_methods.md): statistical analysis tools
 - [**Steps**](steps/_steps.md): pipeline steps
+- [**Common**](common/_common.md): Common classes

@@ -22,7 +22,7 @@ setup-dev: ## Setup development environment
 
 check: ## Lint and format code
 	@echo "Linting API..."
-	@poetry run ruff src/gentropy .
+	@poetry run ruff check src/gentropy .
 	@echo "Linting docstrings..."
 	@poetry run pydoclint --config=pyproject.toml src
 	@poetry run pydoclint --config=pyproject.toml --skip-checking-short-docstrings=true tests

@@ -2,43 +2,41 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import hail as hl
 
+from gentropy.common.types import VariantPopulation
+from gentropy.config import VariantAnnotationConfig
 from gentropy.dataset.variant_annotation import VariantAnnotation
 
 if TYPE_CHECKING:
     pass
 
 
-@dataclass
 class GnomADVariants:
-    """GnomAD variants included in the GnomAD genomes dataset.
+    """GnomAD variants included in the GnomAD genomes dataset."""
 
-    Attributes:
-        gnomad_genomes (str): Path to gnomAD genomes hail table. Defaults to gnomAD's 4.0 release.
-        chain_hail_38_37 (str): Path to GRCh38 to GRCh37 chain file. Defaults to Hail's chain file.
-        populations (list[str]): List of populations to include. Defaults to all populations.
-    """
+    def __init__(
+        self,
+        gnomad_genomes_path: str = VariantAnnotationConfig().gnomad_genomes_path,
+        chain_38_37: str = VariantAnnotationConfig().chain_38_37,
+        gnomad_variant_populations: list[
+            VariantPopulation | str
+        ] = VariantAnnotationConfig().gnomad_variant_populations,
+    ):
+        """Initialize.
 
-    gnomad_genomes: str = "gs://gcp-public-data--gnomad/release/4.0/ht/genomes/gnomad.genomes.v4.0.sites.ht/"
-    chain_hail_38_37: str = "gs://hail-common/references/grch38_to_grch37.over.chain.gz"
-    populations: list[str] = field(
-        default_factory=lambda: [
-            "afr",  # African-American
-            "amr",  # American Admixed/Latino
-            "ami",  # Amish ancestry
-            "asj",  # Ashkenazi Jewish
-            "eas",  # East Asian
-            "fin",  # Finnish
-            "nfe",  # Non-Finnish European
-            "mid",  # Middle Eastern
-            "sas",  # South Asian
-            "remaining",  # Other
-        ]
-    )
+        Args:
+            gnomad_genomes_path (str): Path to gnomAD genomes hail table.
+            chain_38_37 (str): Path to GRCh38 to GRCh37 chain file.
+            gnomad_variant_populations (list[VariantPopulation | str]): List of populations to include.
+
+        All defaults are stored in VariantAnnotationConfig.
+        """
+        self.gnomad_genomes_path = gnomad_genomes_path
+        self.chain_38_37 = chain_38_37
+        self.gnomad_variant_populations = gnomad_variant_populations
 
     def as_variant_annotation(self: GnomADVariants) -> VariantAnnotation:
         """Generate variant annotation dataset from gnomAD.
@@ -54,14 +52,14 @@ class GnomADVariants:
         """
         # Load variants dataset
         ht = hl.read_table(
-            self.gnomad_genomes,
+            self.gnomad_genomes_path,
             _load_refs=False,
         )
 
         # Liftover
         grch37 = hl.get_reference("GRCh37")
         grch38 = hl.get_reference("GRCh38")
-        grch38.add_liftover(self.chain_hail_38_37, grch37)
+        grch38.add_liftover(self.chain_38_37, grch37)
 
         # Drop non biallelic variants
         ht = ht.filter(ht.alleles.length() == 2)
@@ -88,7 +86,7 @@ class GnomADVariants:
                     rsIds=ht.rsid,
                     alleleType=ht.allele_info.allele_type,
                     alleleFrequencies=hl.set(
-                        [f"{pop}_adj" for pop in self.populations]
+                        [f"{pop}_adj" for pop in self.gnomad_variant_populations]
                     ).map(
                         lambda p: hl.struct(
                             populationName=p,

@@ -8,6 +8,7 @@ static_assets: gs://genetics_etl_python_playground/static_assets
 outputs: gs://genetics_etl_python_playground/output/python_etl/parquet/${datasets.dev_version}
 
 ## Datasets:
+# GWAS
 gwas_catalog_dataset: gs://gwas_catalog_data
 # Ingestion input files:
 gwas_catalog_associations: ${datasets.gwas_catalog_dataset}/curated_inputs/gwas_catalog_associations_ontology_annotated.tsv
@@ -29,7 +30,18 @@ gwas_catalog_study_index: ${datasets.gwas_catalog_dataset}/study_index
 gwas_catalog_study_locus_folder: ${datasets.gwas_catalog_dataset}/study_locus_datasets
 gwas_catalog_credible_set_folder: ${datasets.gwas_catalog_dataset}/credible_set_datasets
 
-# Input datasets
+# GnomAD
+gnomad_public_bucket: gs://gcp-public-data--gnomad/release
+# LD generation
+# Templates require placeholders {POP} to expand template to match multiple populationwise paths
+ld_matrix_template: ${datasets.gnomad_public_bucket}/2.1.1/ld/gnomad.genomes.r2.1.1.{POP}.common.adj.ld.bm
+ld_index_raw_template: ${datasets.gnomad_public_bucket}/2.1.1/ld/gnomad.genomes.r2.1.1.{POP}.common.ld.variant_indices.ht
+liftover_ht_path: ${datasets.gnomad_public_bucket}/2.1.1/liftover_grch38/ht/genomes/gnomad.genomes.r2.1.1.sites.liftover_grch38.ht
+# variant_annotation
+gnomad_genomes_path: ${datasets.gnomad_public_bucket}4.0/ht/genomes/gnomad.genomes.v4.0.sites.ht/
+
+# Others
+chain_38_37: gs://hail-common/references/grch38_to_grch37.over.chain.gz
 chain_37_38: ${datasets.static_assets}/grch37_to_grch38.over.chain
 vep_consequences: ${datasets.static_assets}/vep_consequences.tsv
 anderson: ${datasets.static_assets}/andersson2014/enhancer_tss_associations.bed
