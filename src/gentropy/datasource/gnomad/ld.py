@@ -503,7 +503,7 @@ class GnomADLDMatrix:
 
         half_matrix = (
             BlockMatrix.read(
-                GnomADLDMatrix.ld_matrix_template.format(POP=gnomad_ancestry)
+                GnomADLDMatrix().ld_matrix_template.format(POP=gnomad_ancestry)
             )
             .filter(idx, idx)
             .to_numpy()
