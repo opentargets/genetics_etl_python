@@ -1,10 +1,14 @@
 """Dataset class for gentropy."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from functools import reduce
 from typing import TYPE_CHECKING, Any
 
+import pyspark.sql.functions as f
+from pyspark.sql.types import DoubleType
 from typing_extensions import Self
 
 from gentropy.common.schemas import flatten_schema
@@ -163,6 +167,29 @@ class Dataset(ABC):
             raise ValueError(
                 f"The following fields present differences in their datatypes: {fields_with_different_observed_datatype}."
             )
+
+    def drop_infinity_values(self: Self, *cols: str) -> Self:
+        """Drop infinity values from Double typed column.
+
+        Infinity type reference - https://spark.apache.org/docs/latest/sql-ref-datatypes.html#floating-point-special-values
+        The implementation comes from https://stackoverflow.com/questions/34432998/how-to-replace-infinity-in-pyspark-dataframe
+
+        Args:
+            *cols (str): names of the columns to check for infinite values, these should be of DoubleType only!
+
+        Returns:
+            Self: Dataset after removing infinite values
+        """
+        if len(cols) == 0:
+            return self
+        inf_strings = ("Inf", "+Inf", "-Inf", "Infinity", "+Infinity", "-Infinity")
+        inf_values = [f.lit(v).cast(DoubleType()) for v in inf_strings]
+        conditions = [f.col(c).isin(inf_values) for c in cols]
+        # reduce individual filter expressions with or statement
+        # to col("beta").isin([lit(Inf)]) | col("beta").isin([lit(Inf)])...
+        condition = reduce(lambda a, b: a | b, conditions)
+        self.df = self._df.filter(~condition)
+        return self
 
     def persist(self: Self) -> Self:
         """Persist in memory the DataFrame included in the Dataset.

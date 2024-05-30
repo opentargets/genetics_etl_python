@@ -1,4 +1,5 @@
 """Summary satistics dataset."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -108,9 +109,12 @@ class SummaryStatistics(Dataset):
         """The function filters the summary statistics by sanity filters.
 
         The function filters the summary statistics by the following filters:
-            - The p-value should not be eqaul 1.
-            - The beta and se should not be equal 0.
+            - The p-value should be less than 1.
+            - The pValueMantissa should be greater than 0.
+            - The beta should not be equal 0.
             - The p-value, beta and se should not be NaN.
+            - The se should be positive.
+            - The beta and se should not be infinite.
 
         Returns:
             SummaryStatistics: The filtered summary statistics.
@@ -119,13 +123,15 @@ class SummaryStatistics(Dataset):
         gwas_df = gwas_df.dropna(
             subset=["beta", "standardError", "pValueMantissa", "pValueExponent"]
         )
-
-        gwas_df = gwas_df.filter((f.col("beta") != 0) & (f.col("standardError") != 0))
+        gwas_df = gwas_df.filter((f.col("beta") != 0) & (f.col("standardError") > 0))
         gwas_df = gwas_df.filter(
-            f.col("pValueMantissa") * 10 ** f.col("pValueExponent") != 1
+            (f.col("pValueMantissa") * 10 ** f.col("pValueExponent") < 1)
+            & (f.col("pValueMantissa") > 0)
         )
-
-        return SummaryStatistics(
+        cols = ["beta", "standardError"]
+        summary_stats = SummaryStatistics(
             _df=gwas_df,
             _schema=SummaryStatistics.get_schema(),
-        )
+        ).drop_infinity_values(*cols)
+
+        return summary_stats
