@@ -6,4 +6,4 @@ title: L2G Prediction
 
 ## Schema
 
---8<-- "assets/schemas/l2g_prediction.md"
+--8<-- "assets/schemas/l2g_predictions.md"
