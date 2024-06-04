@@ -355,11 +355,17 @@ class VariantToGeneConfig(StepConfig):
 
 
 @dataclass
-class WindowBasedClumpingStep(StepConfig):
+class WindowBasedClumpingStepConfig(StepConfig):
     """Window-based clumping step configuration."""
 
+    session: Any = field(
+        default_factory=lambda: {
+            "start_hail": True,
+        }
+    )
     summary_statistics_input_path: str = MISSING
     study_locus_output_path: str = MISSING
+    gwas_significance: float = 5e-8
     distance: int = 500_000
     collect_locus: bool = False
     collect_locus_distance: int = 500_000
@@ -454,5 +460,7 @@ def register_config() -> None:
     cs.store(group="step", name="variant_annotation", node=VariantAnnotationConfig)
     cs.store(group="step", name="variant_index", node=VariantIndexConfig)
     cs.store(group="step", name="variant_to_gene", node=VariantToGeneConfig)
-    cs.store(group="step", name="window_based_clumping", node=WindowBasedClumpingStep)
+    cs.store(
+        group="step", name="window_based_clumping", node=WindowBasedClumpingStepConfig
+    )
     cs.store(group="step", name="susie_finemapping", node=FinemapperConfig)

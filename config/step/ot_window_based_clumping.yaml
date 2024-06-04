@@ -4,3 +4,4 @@ defaults:
 summary_statistics_input_path: ???
 study_locus_output_path: ???
 inclusion_list_path: ???
+gwas_significance: 1e-8

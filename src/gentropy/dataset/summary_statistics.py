@@ -9,6 +9,7 @@ import pyspark.sql.functions as f
 
 from gentropy.common.schemas import parse_spark_schema
 from gentropy.common.utils import parse_region, split_pvalue
+from gentropy.config import WindowBasedClumpingStepConfig
 from gentropy.dataset.dataset import Dataset
 
 if TYPE_CHECKING:
@@ -57,8 +58,8 @@ class SummaryStatistics(Dataset):
 
     def window_based_clumping(
         self: SummaryStatistics,
-        distance: int = 500_000,
-        gwas_significance: float = 5e-8,
+        distance: int = WindowBasedClumpingStepConfig().distance,
+        gwas_significance: float = WindowBasedClumpingStepConfig().gwas_significance,
     ) -> StudyLocus:
         """Generate study-locus from summary statistics using window-based clumping.
 
@@ -70,6 +71,7 @@ class SummaryStatistics(Dataset):
 
         Returns:
             StudyLocus: Clumped study-locus optionally containing variants based on window.
+            Check WindowBasedClumpingStepConfig object for default values.
         """
         from gentropy.method.window_based_clumping import WindowBasedClumping
 

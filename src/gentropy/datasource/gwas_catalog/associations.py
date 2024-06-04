@@ -20,6 +20,7 @@ from gentropy.common.spark_helpers import (
     pvalue_to_zscore,
 )
 from gentropy.common.utils import parse_efos
+from gentropy.config import WindowBasedClumpingStepConfig
 from gentropy.dataset.study_locus import StudyLocus, StudyLocusQualityCheck
 
 if TYPE_CHECKING:
@@ -1035,7 +1036,7 @@ class GWASCatalogCuratedAssociationsParser:
         cls: type[GWASCatalogCuratedAssociationsParser],
         gwas_associations: DataFrame,
         variant_annotation: VariantAnnotation,
-        pvalue_threshold: float = 5e-8,
+        pvalue_threshold: float = WindowBasedClumpingStepConfig.gwas_significance,
     ) -> StudyLocusGWASCatalog:
         """Read GWASCatalog associations.
 
@@ -1049,6 +1050,8 @@ class GWASCatalogCuratedAssociationsParser:
 
         Returns:
             StudyLocusGWASCatalog: GWASCatalogAssociations dataset
+
+        pvalue_threshold is keeped in sync with the WindowBasedClumpingStep gwas_significance.
         """
         return StudyLocusGWASCatalog(
             _df=gwas_associations.withColumn(

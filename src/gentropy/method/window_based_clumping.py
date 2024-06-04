@@ -11,6 +11,7 @@ from pyspark.ml import functions as fml
 from pyspark.ml.linalg import DenseVector, VectorUDT
 from pyspark.sql.window import Window
 
+from gentropy.config import WindowBasedClumpingStepConfig
 from gentropy.dataset.study_locus import StudyLocus
 
 if TYPE_CHECKING:
@@ -154,8 +155,8 @@ class WindowBasedClumping:
     @staticmethod
     def clump(
         summary_statistics: SummaryStatistics,
-        distance: int = 500_000,
-        gwas_significance: float = 5e-8,
+        distance: int = WindowBasedClumpingStepConfig().distance,
+        gwas_significance: float = WindowBasedClumpingStepConfig().gwas_significance,
     ) -> StudyLocus:
         """Clump significant signals from summary statistics based on window.
 
@@ -166,6 +167,8 @@ class WindowBasedClumping:
 
         Returns:
             StudyLocus: clumped summary statistics (without locus collection)
+
+            Check WindowBasedClumpingStepConfig object for default values
         """
         # Create window for locus clusters
         # - variants where the distance between subsequent variants is below the defined threshold.
