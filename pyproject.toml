@@ -37,7 +37,7 @@ pandas = {extras = ["gcp", "parquet"], version = "^2.2.2"}
 [tool.poetry.dev-dependencies]
 pre-commit = "^3.7.0"
 mypy = "^1.10"
-pep8-naming = "^0.13.2"
+pep8-naming = "^0.14.1"
 interrogate = "^1.7.0"
 isort = "^5.13.2"
 darglint = "^1.8.1"
