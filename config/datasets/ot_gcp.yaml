@@ -1,5 +1,5 @@
 # Release specific configuration:
-release_version: "24.03"
+release_version: "24.06"
 dev_version: XX.XX
 release_folder: gs://genetics_etl_python_playground/releases/${datasets.release_version}
 
@@ -72,6 +72,7 @@ from_sumstats_pics: ${datasets.credible_set}/from_sumstats
 l2g_gold_standard_curation: ${datasets.release_folder}/locus_to_gene_gold_standard.json
 l2g_model: ${datasets.release_folder}/locus_to_gene_model
 l2g_predictions: ${datasets.release_folder}/locus_to_gene_predictions
+l2g_feature_matrix: ${datasets.release_folder}/locus_to_gene_feature_matrix
 colocalisation: ${datasets.release_folder}/colocalisation
 study_index: ${datasets.release_folder}/study_index
 variant_index: ${datasets.release_folder}/variant_index

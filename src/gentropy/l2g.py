@@ -36,6 +36,7 @@ class LocusToGeneStep:
         gene_interactions_path: str,
         features_list: list[str],
         hyperparameters: dict[str, Any],
+        feature_matrix_path: str | None = None,
         wandb_run_name: str | None = None,
         perform_cross_validation: bool = False,
     ) -> None:
@@ -54,6 +55,8 @@ class LocusToGeneStep:
             gene_interactions_path (str): Path to gene interactions Parquet files.
             features_list (list[str]): List of features to use.
             hyperparameters (dict[str, Any]): Hyperparameters for the model.
+            feature_matrix_path (str | None): Optional path where the raw feature matrix should be stored.
+                If None, the feature matrix is not published. The feature matrix is published only when `run_mode` is `predict`.
             wandb_run_name (str | None): Name of the run to be tracked on W&B.
             perform_cross_validation (bool): Whether to perform cross validation.
 
@@ -82,9 +85,13 @@ class LocusToGeneStep:
                 raise ValueError(
                     "model_path and predictions_path must be set for predict mode."
                 )
-            predictions = L2GPrediction.from_credible_set(
+            predictions, feature_matrix = L2GPrediction.from_credible_set(
                 model_path, list(features_list), credible_set, studies, v2g, coloc
             )
+            if feature_matrix_path:
+                feature_matrix.df.write.mode(session.write_mode).parquet(
+                    feature_matrix_path
+                )
             predictions.df.write.mode(session.write_mode).parquet(predictions_path)
             session.logger.info(predictions_path)
         elif (

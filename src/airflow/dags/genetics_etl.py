@@ -14,7 +14,7 @@ CLUSTER_NAME = "otg-etl"
 SOURCE_CONFIG_FILE_PATH = Path(__file__).parent / "configs" / "dag.yaml"
 
 # Release specific variables:
-RELEASE_VERSION = "24.03"
+RELEASE_VERSION = "24.06"
 RELEASE_BUCKET_NAME = "genetics_etl_python_playground"
 
 # Datasource paths:
@@ -73,13 +73,6 @@ DATA_TO_MOVE = {
         "source_object": f"{FINNGEN_RELEASE}/study_index",
         "destination_bucket": RELEASE_BUCKET_NAME,
         "destination_object": f"releases/{RELEASE_VERSION}/study_index/finngen",
-    },
-    # Finngen summary statistics:
-    "finngen_PICS_credible_set": {
-        "source_bucket": FINNGEN_BUCKET_NAME,
-        "source_object": f"{FINNGEN_RELEASE}/credible_set_datasets/finngen_pics",
-        "destination_bucket": RELEASE_BUCKET_NAME,
-        "destination_object": f"releases/{RELEASE_VERSION}/credible_set/finngen_pics",
     },
     # Finngen SuSiE credible sets:
     "finngen_susie_credible_set": {

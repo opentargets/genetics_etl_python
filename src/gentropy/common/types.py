@@ -9,7 +9,7 @@ VariantPopulation = Literal[
 ]
 DataSourceType = Literal[
     "gnomad",
-    "fingenn",
+    "finngen",
     "gwas_catalog",
     "eqtl_catalog",
     "ukbiobank",

@@ -48,7 +48,7 @@ class L2GPrediction(Dataset):
         study_index: StudyIndex,
         v2g: V2G,
         coloc: Colocalisation,
-    ) -> L2GPrediction:
+    ) -> tuple[L2GPrediction, L2GFeatureMatrix]:
         """Extract L2G predictions for a set of credible sets derived from GWAS.
 
         Args:
@@ -60,7 +60,7 @@ class L2GPrediction(Dataset):
             coloc (Colocalisation): Colocalisation dataset
 
         Returns:
-            L2GPrediction: L2G dataset
+            tuple[L2GPrediction, L2GFeatureMatrix]: L2G dataset and feature matrix limited to GWAS study only.
         """
         fm = L2GFeatureMatrix.generate_features(
             features_list=features_list,
@@ -79,21 +79,24 @@ class L2GPrediction(Dataset):
             ),
             _schema=cls.get_schema(),
         )
-        return L2GPrediction(
-            # Load and apply fitted model
-            _df=(
-                LocusToGeneModel.load_from_disk(
-                    model_path,
-                    features_list=features_list,
-                )
-                .predict(gwas_fm)
-                # the probability of the positive class is the second element inside the probability array
-                # - this is selected as the L2G probability
-                .select(
-                    "studyLocusId",
-                    "geneId",
-                    vector_to_array(f.col("probability"))[1].alias("score"),
-                )
+        return (
+            L2GPrediction(
+                # Load and apply fitted model
+                _df=(
+                    LocusToGeneModel.load_from_disk(
+                        model_path,
+                        features_list=features_list,
+                    )
+                    .predict(gwas_fm)
+                    # the probability of the positive class is the second element inside the probability array
+                    # - this is selected as the L2G probability
+                    .select(
+                        "studyLocusId",
+                        "geneId",
+                        vector_to_array(f.col("probability"))[1].alias("score"),
+                    )
+                ),
+                _schema=cls.get_schema(),
             ),
-            _schema=cls.get_schema(),
+            gwas_fm,
         )
