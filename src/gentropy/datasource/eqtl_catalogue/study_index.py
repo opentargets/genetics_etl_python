@@ -43,7 +43,7 @@ class EqtlCatalogueStudyIndex:
             StructField("quant_method", StringType(), True),
         ]
     )
-    raw_studies_metadata_path = "https://raw.githubusercontent.com/eQTL-Catalogue/eQTL-Catalogue-resources/19929ff6a99bf402194292a14f96f9615b35f65f/data_tables/dataset_metadata.tsv"
+    raw_studies_metadata_path = "https://raw.githubusercontent.com/eQTL-Catalogue/eQTL-Catalogue-resources/4c8ca340e3eb2878073b290785cb8ff1a4c788f8/data_tables/dataset_metadata_upcoming.tsv"
 
     @classmethod
     def _identify_study_type(
@@ -85,7 +85,8 @@ class EqtlCatalogueStudyIndex:
 
     @classmethod
     def get_studies_of_interest(
-        cls: type[EqtlCatalogueStudyIndex], studies_metadata: DataFrame
+        cls: type[EqtlCatalogueStudyIndex],
+        studies_metadata: DataFrame,
     ) -> list[str]:
         """Filter studies of interest from the raw studies metadata.
 

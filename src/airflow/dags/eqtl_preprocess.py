@@ -15,9 +15,9 @@ CLUSTER_NAME = "otg-preprocess-eqtl"
 AUTOSCALING = "eqtl-preprocess"
 PROJECT_ID = "open-targets-genetics-dev"
 
-EQTL_CATALOG_SUSIE_LOCATION = "gs://eqtl_catalogue_data/ebi_ftp/susie"
-TEMP_DECOMPRESS_LOCATION = "gs://eqtl_catalogue_data/susie_decompressed_tmp"
-DECOMPRESS_FAILED_LOG = f"{TEMP_DECOMPRESS_LOCATION}.log"
+EQTL_CATALOGUE_SUSIE_LOCATION = "gs://eqtl_catalogue_data/ebi_ftp/susie"
+TEMP_DECOMPRESS_LOCATION = f"{EQTL_CATALOGUE_SUSIE_LOCATION}_decompressed_tmp"
+DECOMPRESS_FAILED_LOG = f"{TEMP_DECOMPRESS_LOCATION}/logs.log"
 STUDY_INDEX_PATH = "gs://eqtl_catalogue_data/study_index"
 CREDIBLE_SET_PATH = "gs://eqtl_catalogue_data/credible_set_datasets/susie"
 
@@ -35,7 +35,7 @@ with DAG(
         location="europe-west1",
         project_id=PROJECT_ID,
         parameters={
-            "inputFilePattern": f"{EQTL_CATALOG_SUSIE_LOCATION}/**/*.gz",
+            "inputFilePattern": f"{EQTL_CATALOGUE_SUSIE_LOCATION}/**/*.gz",
             "outputDirectory": TEMP_DECOMPRESS_LOCATION,
             "outputFailureFile": DECOMPRESS_FAILED_LOG,
         },

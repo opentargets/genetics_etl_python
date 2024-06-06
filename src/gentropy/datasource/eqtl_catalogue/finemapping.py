@@ -1,4 +1,5 @@
 """Process SuSIE finemapping results from eQTL Catalogue."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -190,7 +191,7 @@ class EqtlCatalogueFinemapping:
                     f.col("sample_group"),
                     f.col("molecular_trait_id"),
                 ).alias("studyId"),
-                f.col("tissue_id").alias("tissueFromSourceId"),
+                f.col("tissue_id").alias("biosampleFromSourceId"),
                 EqtlCatalogueStudyIndex._identify_study_type(
                     f.col("quant_method")
                 ).alias("studyType"),

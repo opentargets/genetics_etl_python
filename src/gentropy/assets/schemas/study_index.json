@@ -42,7 +42,7 @@
       "metadata": {}
     },
     {
-      "name": "tissueFromSourceId",
+      "name": "biosampleFromSourceId",
       "type": "string",
       "nullable": true,
       "metadata": {}
