@@ -10,6 +10,7 @@ We have implemented two clumping methods:
 
 1. **Distance-based clumping:** Uses genomic window to clump the significant SNPs into one hit.
 2. **LD-based clumping:** Uses genomic window and LD to clump the significant SNPs into one hit.
+3. **Locus-breaker clumping:** Applies a distance cutoff between baseline significant SNPs. Returns the start and end position of the locus as well.
 
 The algorithmic logic is similar to classic clumping approaches from PLINK (Reference: [PLINK Clump Documentation](https://zzz.bwh.harvard.edu/plink/clump.shtml)). See details below:
 
@@ -20,3 +21,7 @@ The algorithmic logic is similar to classic clumping approaches from PLINK (Refe
 # LD-based clumping:
 
 ::: gentropy.method.clump.LDclumping
+
+# Locus-breaker clumping
+
+::: gentropy.method.locus_breaker_clumping.locus_breaker

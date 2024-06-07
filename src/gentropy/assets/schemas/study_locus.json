@@ -120,6 +120,18 @@
     },
     {
       "metadata": {},
+      "name": "locusStart",
+      "nullable": true,
+      "type": "integer"
+    },
+    {
+      "metadata": {},
+      "name": "locusEnd",
+      "nullable": true,
+      "type": "integer"
+    },
+    {
+      "metadata": {},
       "name": "sampleSize",
       "nullable": true,
       "type": "integer"
