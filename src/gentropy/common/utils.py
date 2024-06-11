@@ -314,3 +314,21 @@ def get_logsum(arr: NDArray[np.float64]) -> float:
     themax = np.max(arr)
     result = themax + np.log(np.sum(np.exp(arr - themax)))
     return float(result)
+
+
+def access_gcp_secret(secret_id: str, project_id: str) -> str:
+    """Access GCP secret manager to get the secret value.
+
+    Args:
+        secret_id (str): ID of the secret
+        project_id (str): ID of the GCP project
+
+    Returns:
+        str: secret value
+    """
+    from google.cloud import secretmanager
+
+    client = secretmanager.SecretManagerServiceClient()
+    name = f"projects/{project_id}/secrets/{secret_id}/versions/latest"
+    response = client.access_secret_version(name=name)
+    return response.payload.data.decode("UTF-8")
