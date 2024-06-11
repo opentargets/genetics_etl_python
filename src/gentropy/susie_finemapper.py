@@ -23,6 +23,7 @@ from pyspark.sql.types import (
 
 from gentropy.common.session import Session
 from gentropy.common.spark_helpers import neglog_pvalue_to_mantissa_and_exponent
+from gentropy.dataset.ld_index import LDIndex
 from gentropy.dataset.study_index import StudyIndex
 from gentropy.dataset.study_locus import StudyLocus
 from gentropy.dataset.summary_statistics import SummaryStatistics
@@ -1168,3 +1169,45 @@ class SusieFineMapperStep:
         )
 
         return out
+
+    @staticmethod
+    def credible_set_qc(
+        cred_sets: StudyLocus,
+        study_index: StudyIndex,
+        ld_index: LDIndex,
+        p_value_threshold: float = 1e-5,
+        purity_min_r2: float = 0.01,
+    ) -> StudyLocus:
+        """Filter credible sets by lead P-value and min-R2 purity, and performs LD clumping.
+
+        Args:
+            cred_sets (StudyLocus): StudyLocus object with credible sets to filter/clump
+            study_index (StudyIndex): StudyIndex object
+            ld_index (LDIndex): LDIndex object
+            p_value_threshold (float): p-value threshold for filtering credible sets, default is 1e-5
+            purity_min_r2 (float): min-R2 purity threshold for filtering credible sets, default is 0.25
+
+        Returns:
+            StudyLocus: Credible sets which pass filters and LD clumping.
+        """
+        df = (
+            cred_sets.df.withColumn(
+                "pValue", f.col("pValueMantissa") * f.pow(10, f.col("pValueExponent"))
+            )
+            .filter(f.col("pValue") <= p_value_threshold)
+            .filter(f.col("purityMinR2") >= purity_min_r2)
+            .drop("pValue")
+        )
+        cred_sets.df = df
+        cred_sets = (
+            cred_sets.annotate_ld(study_index, ld_index)
+            .clump()
+            .filter(
+                ~f.array_contains(
+                    f.col("qualityControls"),
+                    "Explained by a more significant variant in high LD (clumped)",
+                )
+            )
+        )
+
+        return cred_sets
