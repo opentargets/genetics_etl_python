@@ -4,7 +4,7 @@ defaults:
 ld_index_out: ${datasets.ld_index}
 ld_matrix_template: ${datasets.ld_matrix_template}
 ld_index_raw_template: ${datasets.ld_index_raw_template}
-grch37_to_grch38_chain_path: ${datasets.chain_37_38.}
+grch37_to_grch38_chain_path: ${datasets.chain_37_38}
 liftover_ht_path: ${datasets.liftover_ht_path}
 ld_populations:
   - afr # African-American

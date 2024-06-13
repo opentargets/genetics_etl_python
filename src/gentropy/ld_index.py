@@ -29,6 +29,7 @@ class LDIndexStep:
         ld_index_raw_template: str = LDIndexConfig().ld_index_raw_template,
         ld_populations: list[LD_Population | str] = LDIndexConfig().ld_populations,
         liftover_ht_path: str = LDIndexConfig().liftover_ht_path,
+        grch37_to_grch38_chain_path: str = LDIndexConfig().grch37_to_grch38_chain_path,
         use_version_from_input: bool = LDIndexConfig().use_version_from_input,
     ) -> None:
         """Run step.
@@ -41,6 +42,7 @@ class LDIndexStep:
             ld_index_raw_template (str): Input path to the raw gnomAD LD indices file with placeholder for population string
             ld_populations (list[LD_Population | str]): Population names derived from the ld file paths
             liftover_ht_path (str): Path to the liftover ht file
+            grch37_to_grch38_chain_path (str): Path to the chain file used to lift over the coordinates.
             use_version_from_input (bool): Append version derived from input ld_matrix_template to the output ld_index_out. Defaults to False.
 
         In case use_version_from_input is set to True,
@@ -57,6 +59,7 @@ class LDIndexStep:
             GnomADLDMatrix(
                 ld_matrix_template=ld_matrix_template,
                 ld_index_raw_template=ld_index_raw_template,
+                grch37_to_grch38_chain_path=grch37_to_grch38_chain_path,
                 ld_populations=ld_populations,
                 liftover_ht_path=liftover_ht_path,
             )
