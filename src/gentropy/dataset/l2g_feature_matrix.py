@@ -1,4 +1,5 @@
 """Feature matrix of study locus pairs annotated with their functional genomics features."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -35,6 +36,7 @@ class L2GFeatureMatrix(Dataset):
         self.features_list = self.features_list or [
             col for col in self._df.columns if col not in fixed_cols
         ]
+        self.validate_schema()
 
     @classmethod
     def generate_features(

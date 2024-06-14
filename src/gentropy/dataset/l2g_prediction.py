@@ -73,11 +73,13 @@ class L2GPrediction(Dataset):
         gwas_fm = L2GFeatureMatrix(
             _df=(
                 fm.df.join(
-                    credible_set.filter_by_study_type("gwas", study_index).df,
+                    credible_set.filter_by_study_type("gwas", study_index).df.select(
+                        "studyLocusId"
+                    ),
                     on="studyLocusId",
                 )
             ),
-            _schema=cls.get_schema(),
+            _schema=L2GFeatureMatrix.get_schema(),
         )
         return (
             L2GPrediction(

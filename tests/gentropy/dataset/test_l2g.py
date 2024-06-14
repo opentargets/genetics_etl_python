@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from gentropy.dataset.l2g_feature_matrix import L2GFeatureMatrix
 from gentropy.dataset.l2g_gold_standard import L2GGoldStandard
 from gentropy.dataset.l2g_prediction import L2GPrediction
@@ -152,6 +153,27 @@ def test_remove_false_negatives(spark: SparkSession) -> None:
     assert observed_df.collect() == expected_df.collect()
 
 
+def test_l2g_feature_constructor_with_schema_mismatch(spark: SparkSession) -> None:
+    """Test if provided shema mismatch results in error in L2GFeatureMatrix constructor.
+
+    distanceTssMean is expected to be FLOAT by schema in src.gentropy.assets.schemas and is actualy DOUBLE.
+    """
+    with pytest.raises(ValueError) as e:
+        L2GFeatureMatrix(
+            _df=spark.createDataFrame(
+                [
+                    (1, "gene1", 100.0),
+                    (2, "gene2", 1000.0),
+                ],
+                "studyLocusId LONG, geneId STRING, distanceTssMean DOUBLE",
+            ),
+            _schema=L2GFeatureMatrix.get_schema(),
+        )
+    assert e.value.args[0] == (
+        "The following fields present differences in their datatypes: ['distanceTssMean']."
+    )
+
+
 def test_calculate_feature_missingness_rate(spark: SparkSession) -> None:
     """Test L2GFeatureMatrix.calculate_feature_missingness_rate."""
     fm = L2GFeatureMatrix(
@@ -160,7 +182,7 @@ def test_calculate_feature_missingness_rate(spark: SparkSession) -> None:
                 (1, "gene1", 100.0, None),
                 (2, "gene2", 1000.0, 0.0),
             ],
-            "studyLocusId LONG, geneId STRING, distanceTssMean DOUBLE, distanceTssMinimum DOUBLE",
+            "studyLocusId LONG, geneId STRING, distanceTssMean FLOAT, distanceTssMinimum FLOAT",
         ),
         _schema=L2GFeatureMatrix.get_schema(),
     )
