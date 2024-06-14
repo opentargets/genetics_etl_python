@@ -8,6 +8,88 @@
 
 
 
+## v1.4.0 (2024-06-14)
+### ✨ Feature
+
+
+- \[**config**\] 24.06 data release fixes (#639) [\@Szymon Szyszkowski](mailto:69353402+project-defiant@users.noreply.github.com)
+
+
+-  credible set quality filtering (#640) [\@Daniel-Considine](mailto:113430683+Daniel-Considine@users.noreply.github.com)
+
+
+-  enable interface with gcp secrets manager (#635) [\@Irene López](mailto:45119610+ireneisdoomed@users.noreply.github.com)
+
+
+-  adding locus-breaker clumping method (#634) [\@Daniel Suveges](mailto:daniel.suveges@protonmail.com)
+
+
+- \[**spark-helpers**\] enforce schema of returned objects (#617) [\@Daniel Suveges](mailto:daniel.suveges@protonmail.com)
+
+
+- \[**qtl**\] ingest credible sets from single cell derived QTLs (#630) [\@Irene López](mailto:45119610+ireneisdoomed@users.noreply.github.com)
+
+
+- \[**data_release**\] preparation for 24.06 data release (#633) [\@Szymon Szyszkowski](mailto:69353402+project-defiant@users.noreply.github.com)
+
+
+- \[**config**\] extract gwas_significance parameter to step configuration (#628) [\@Szymon Szyszkowski](mailto:69353402+project-defiant@users.noreply.github.com)
+
+
+- \[**config**\] gnomAD steps configuration extraction and versioning (#620) [\@Szymon Szyszkowski](mailto:69353402+project-defiant@users.noreply.github.com)
+
+
+-  fine-mapping simulations class (#618) [\@Yakov](mailto:yt4@sanger.ac.uk)
+
+### 🐛 Fix
+
+
+- \[**L2GPrediction**\] schema validation (#642) [\@Szymon Szyszkowski](mailto:69353402+project-defiant@users.noreply.github.com)
+
+
+- \[**docs**\] fixed typo in l2g_prediciton schema page (#629) [\@Szymon Szyszkowski](mailto:69353402+project-defiant@users.noreply.github.com)
+
+
+- \[**SummaryStatistics**\] fix in sanity_filter (#623) [\@Yakov](mailto:yt4@sanger.ac.uk)
+
+
+- \[**susie_finemapper**\] fix in the fine-mapper in case of sum stat imputation is False (#627) [\@Yakov](mailto:yt4@sanger.ac.uk)
+
+
+- \[**susie_finemapper**\] correct syntax for saving the logs df (#625) [\@Kirill Tsukanov](mailto:tskir@users.noreply.github.com)
+
+
+- \[**ld**\] correct syntax for the static method (#624) [\@Kirill Tsukanov](mailto:tskir@users.noreply.github.com)
+
+
+- \[**docs**\] update roadmap.md (#622) [\@buniello](mailto:30833755+buniello@users.noreply.github.com)
+
+
+- \[**spark helpers**\] sorter function updated to avoid crash (#613) [\@Daniel Suveges](mailto:daniel.suveges@protonmail.com)
+
+### 🏗 Build
+
+
+- \[**deps-dev**\] bump dbldatagen from 0.3.5 to 0.4.0 (#637) [\@dependabot[bot]](mailto:49699333+dependabot[bot]@users.noreply.github.com)
+
+
+- \[**deps**\] bump scikit-learn from 1.4.0 to 1.5.0 (#638) [\@dependabot[bot]](mailto:49699333+dependabot[bot]@users.noreply.github.com)
+
+
+- \[**deps-dev**\] bump ipython from 8.24.0 to 8.25.0 (#636) [\@dependabot[bot]](mailto:49699333+dependabot[bot]@users.noreply.github.com)
+
+
+- \[**deps**\] bump wandb from 0.16.2 to 0.17.0 (#606) [\@dependabot[bot]](mailto:49699333+dependabot[bot]@users.noreply.github.com)
+
+
+- \[**deps-dev**\] bump pep8-naming from 0.13.3 to 0.14.1 (#616) [\@dependabot[bot]](mailto:49699333+dependabot[bot]@users.noreply.github.com)
+
+
+- \[**deps**\] bump typing-extensions from 4.11.0 to 4.12.1 (#632) [\@dependabot[bot]](mailto:49699333+dependabot[bot]@users.noreply.github.com)
+
+
+- \[**deps**\] use pandas[gcp, parquet] (#626) [\@Kirill Tsukanov](mailto:tskir@users.noreply.github.com)
+
 ## v1.3.0 (2024-05-17)
 ### ✨ Feature
 
