@@ -14,7 +14,7 @@ from gentropy.common.spark_helpers import (
     calculate_neglog_pvalue,
     order_array_of_structs_by_field,
 )
-from gentropy.common.utils import get_logsum
+from gentropy.common.utils import get_logsum, parse_region
 from gentropy.dataset.dataset import Dataset
 from gentropy.dataset.study_locus_overlap import StudyLocusOverlap
 from gentropy.method.clump import LDclumping
@@ -573,6 +573,41 @@ class StudyLocus(Dataset):
             .drop("is_lead_linked")
         )
         return self
+
+    def exclude_region(
+        self: StudyLocus, region: str, exclude_overlap: bool = False
+    ) -> StudyLocus:
+        """Exclude a region from the StudyLocus dataset.
+
+        Args:
+            region (str): region given in "chr##:#####-####" format
+            exclude_overlap (bool): If True, excludes StudyLocus windows with any overlap with the region.
+
+        Returns:
+            StudyLocus: filtered StudyLocus object.
+        """
+        (chromosome, start_position, end_position) = parse_region(region)
+        if exclude_overlap:
+            filter_condition = ~(
+                (f.col("chromosome") == chromosome)
+                & (
+                    (f.col("locusStart") <= end_position)
+                    & (f.col("locusEnd") >= start_position)
+                )
+            )
+        else:
+            filter_condition = ~(
+                (f.col("chromosome") == chromosome)
+                & (
+                    (f.col("position") >= start_position)
+                    & (f.col("position") <= end_position)
+                )
+            )
+
+        return StudyLocus(
+            _df=self.df.filter(filter_condition),
+            _schema=StudyLocus.get_schema(),
+        )
 
     def _qc_no_population(self: StudyLocus) -> StudyLocus:
         """Flag associations where the study doesn't have population information to resolve LD.
