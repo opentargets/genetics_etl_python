@@ -1,4 +1,5 @@
 """Airflow DAG for the harmonisation part of the pipeline."""
+
 from __future__ import annotations
 
 import re
@@ -99,7 +100,7 @@ with DAG(
             print("Submitting job for study: ", study_id)  # noqa: T201
             common.submit_pyspark_job_no_operator(
                 cluster_name=CLUSTER_NAME,
-                step_id="ot_gwas_catalog_sumstat_preprocess",
+                step_id="gwas_catalog_sumstat_preprocess",
                 other_args=[
                     f"step.raw_sumstats_path=gs://{SUMMARY_STATS_BUCKET_NAME}/{input_path}",
                     f"step.out_sumstats_path=gs://{SUMMARY_STATS_BUCKET_NAME}/{HARMONISED_SUMMARY_STATISTICS_PREFIX}/{study_id}.parquet",

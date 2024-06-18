@@ -53,7 +53,7 @@ with DAG(
     ) as finngen_summary_stats_preprocess:
         study_index = common.submit_step(
             cluster_name=CLUSTER_NAME,
-            step_id="ot_finngen_studies",
+            step_id="finngen_studies",
             task_id="finngen_studies",
             other_args=[
                 f"step.finngen_study_index_out={STUDY_INDEX}",

@@ -380,7 +380,7 @@ class WindowBasedClumpingStepConfig(StepConfig):
     )
     summary_statistics_input_path: str = MISSING
     study_locus_output_path: str = MISSING
-    gwas_significance: float = 5e-8
+    gwas_significance: float = 1e-8
     distance: int = 500_000
     collect_locus: bool = False
     collect_locus_distance: int = 500_000

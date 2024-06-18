@@ -1,5 +1,0 @@
-defaults:
-  - gwas_catalog_sumstat_preprocess
-
-raw_sumstats_path: ???
-out_sumstats_path: ???

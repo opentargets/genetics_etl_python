@@ -1,4 +1,5 @@
 """Airflow DAG for the preprocessing of GWAS Catalog's harmonised summary statistics and curated associations."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -131,7 +132,7 @@ with DAG(
         # Do PICS based finemapping:
         curation_pics = common.submit_step(
             cluster_name=CLUSTER_NAME,
-            step_id="ot_pics",
+            step_id="pics",
             task_id="catalog_curation_pics",
             other_args=[
                 f"step.study_locus_ld_annotated_in={CURATED_LD_CLUMPED}",
@@ -167,7 +168,7 @@ with DAG(
         # Run window-based clumping:
         summary_stats_window_based_clumping = common.submit_step(
             cluster_name=CLUSTER_NAME,
-            step_id="ot_window_based_clumping",
+            step_id="window_based_clumping",
             task_id="catalog_sumstats_window_clumping",
             other_args=[
                 f"step.summary_statistics_input_path=gs://{GWAS_CATALOG_BUCKET_NAME}/{HARMONISED_SUMSTATS_PREFIX}",
@@ -191,7 +192,7 @@ with DAG(
         # Run PICS finemapping:
         summary_stats_pics = common.submit_step(
             cluster_name=CLUSTER_NAME,
-            step_id="ot_pics",
+            step_id="pics",
             task_id="catalog_sumstats_pics",
             other_args=[
                 f"step.study_locus_ld_annotated_in={LD_BASED_CLUMPED}",
