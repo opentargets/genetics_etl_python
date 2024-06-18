@@ -76,7 +76,6 @@ apache-airflow-providers-google = "^10.13.1"
 pydoclint = ">=0.3.8,<0.5.0"
 prettier = "^0.0.7"
 deptry = ">=0.12,<0.17"
-python-semantic-release = ">=8.7,<10.0"
 yamllint = "^1.33.0"
 
 [tool.semantic_release]
