@@ -189,13 +189,13 @@ def mock_study_locus_data(spark: SparkSession) -> DataFrame:
         )
         .withSchema(sl_schema)
         .withColumnSpec("chromosome", percentNulls=0.1)
-        .withColumnSpec("position", percentNulls=0.1)
+        .withColumnSpec("position", minValue=100, percentNulls=0.1)
         .withColumnSpec("beta", percentNulls=0.1)
         .withColumnSpec("effectAlleleFrequencyFromSource", percentNulls=0.1)
         .withColumnSpec("standardError", percentNulls=0.1)
         .withColumnSpec("subStudyDescription", percentNulls=0.1)
         .withColumnSpec("pValueMantissa", minValue=1, percentNulls=0.1)
-        .withColumnSpec("pValueExponent", minValue=1, percentNulls=0.1)
+        .withColumnSpec("pValueExponent", minValue=-10, percentNulls=0.1)
         .withColumnSpec(
             "qualityControls",
             expr="array(cast(rand() as string))",

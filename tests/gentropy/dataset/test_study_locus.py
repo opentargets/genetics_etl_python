@@ -540,3 +540,17 @@ def test_filter_ld_set(spark: SparkSession) -> None:
     assert (
         observed_df.filter(f.size("ldSet") > 1).count() == expected_tags_in_ld
     ), "Expected tags in ld set differ from observed."
+
+
+def test_annotate_locus_statistics_boundaries(
+    mock_study_locus: StudyLocus, mock_summary_statistics: SummaryStatistics
+) -> None:
+    """Test annotate locus statistics returns a StudyLocus."""
+    df = mock_study_locus.df
+    df = df.withColumn("locusStart", f.col("position") - 10)
+    df = df.withColumn("locusEnd", f.col("position") + 10)
+    slt = StudyLocus(df, StudyLocus.get_schema())
+    assert isinstance(
+        slt.annotate_locus_statistics_boundaries(mock_summary_statistics),
+        StudyLocus,
+    )
