@@ -70,7 +70,7 @@ from_sumstats_pics: ${datasets.credible_set}/from_sumstats
 
 # ETL output datasets:
 l2g_gold_standard_curation: ${datasets.release_folder}/locus_to_gene_gold_standard.json
-l2g_model: ${datasets.release_folder}/locus_to_gene_model
+l2g_model: ${datasets.release_folder}/locus_to_gene_model/classifier.skops
 l2g_predictions: ${datasets.release_folder}/locus_to_gene_predictions
 l2g_feature_matrix: ${datasets.release_folder}/locus_to_gene_feature_matrix
 colocalisation: ${datasets.release_folder}/colocalisation

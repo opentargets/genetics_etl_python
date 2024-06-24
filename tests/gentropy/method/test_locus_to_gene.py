@@ -7,15 +7,11 @@ from typing import TYPE_CHECKING
 import pytest
 from gentropy.dataset.colocalisation import Colocalisation
 from gentropy.dataset.l2g_feature import L2GFeature
-from gentropy.dataset.l2g_feature_matrix import L2GFeatureMatrix
 from gentropy.dataset.study_index import StudyIndex
 from gentropy.dataset.study_locus import StudyLocus
 from gentropy.method.l2g.feature_factory import ColocalisationFactory, StudyLocusFactory
 from gentropy.method.l2g.model import LocusToGeneModel
-from gentropy.method.l2g.trainer import LocusToGeneTrainer
-from pyspark.ml import PipelineModel
-from pyspark.ml.tuning import ParamGridBuilder
-from xgboost.spark import SparkXGBClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 if TYPE_CHECKING:
     from gentropy.dataset.v2g import V2G
@@ -25,56 +21,7 @@ if TYPE_CHECKING:
 @pytest.fixture(scope="module")
 def model() -> LocusToGeneModel:
     """Creates an instance of the LocusToGene class."""
-    estimator = SparkXGBClassifier(
-        eval_metric="logloss",
-        features_col="features",
-        label_col="label",
-        max_depth=5,
-    )
-    return LocusToGeneModel(estimator=estimator, features_list=["distanceTssMean"])
-
-
-class TestLocusToGeneTrainer:
-    """Test the L2GTrainer methods using a logistic regression model as estimation algorithm."""
-
-    def test_cross_validate(
-        self: TestLocusToGeneTrainer,
-        mock_l2g_feature_matrix: L2GFeatureMatrix,
-        model: LocusToGeneModel,
-    ) -> None:
-        """Test the k-fold cross-validation function."""
-        param_grid = (
-            ParamGridBuilder()
-            .addGrid(model.estimator.learning_rate, [0.1, 0.01])
-            .build()
-        )
-        best_model = LocusToGeneTrainer.cross_validate(
-            model, mock_l2g_feature_matrix.fill_na(), num_folds=2, param_grid=param_grid
-        )
-        assert isinstance(
-            best_model, LocusToGeneModel
-        ), "Unexpected model type returned from cross_validate"
-        # Check that the best model's hyperparameters are among those in the param_grid
-        assert best_model.model.getOrDefault("learning_rate") in [  # type: ignore
-            0.1,
-            0.01,
-        ], "Unexpected learning rate in the best model"
-
-    def test_train(
-        self: TestLocusToGeneTrainer,
-        mock_l2g_feature_matrix: L2GFeatureMatrix,
-        model: LocusToGeneModel,
-    ) -> None:
-        """Test the training function."""
-        trained_model = LocusToGeneTrainer.train(
-            mock_l2g_feature_matrix.fill_na().select_features(["distanceTssMean"]),
-            model,
-            evaluate=False,
-        )
-        # Check that `model` is a PipelineModel object and not None
-        assert isinstance(
-            trained_model.model, PipelineModel
-        ), "Model is not a PipelineModel object."
+    return LocusToGeneModel(model=RandomForestClassifier())
 
 
 class TestColocalisationFactory:

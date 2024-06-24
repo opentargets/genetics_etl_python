@@ -3,7 +3,7 @@ defaults:
 
 run_mode: train
 wandb_run_name: null
-perform_cross_validation: false
+hf_hub_repo_id: opentargets/locus_to_gene
 model_path: ${datasets.l2g_model}
 predictions_path: ${datasets.l2g_predictions}
 credible_set_path: ${datasets.credible_set}
@@ -13,5 +13,7 @@ study_index_path: ${datasets.study_index}
 gold_standard_curation_path: ${datasets.l2g_gold_standard_curation}
 gene_interactions_path: ${datasets.gene_interactions}
 hyperparameters:
+  n_estimators: 100
   max_depth: 5
-  loss_function: binary:logistic
+  loss: log_loss
+download_from_hub: true

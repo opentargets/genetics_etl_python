@@ -12,3 +12,4 @@ src/airflow/logs/*
 site/
 .env
 .coverage*
+wandb/

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import reduce
 from typing import TYPE_CHECKING, Type
 
@@ -26,15 +26,26 @@ class L2GFeatureMatrix(Dataset):
 
     Attributes:
         features_list (list[str] | None): List of features to use. If None, all possible features are used.
+        fixed_cols (list[str]): Columns that should be kept fixed in the feature matrix, although not considered as features.
+        mode (str): Mode of the feature matrix. Defaults to "train". Can be either "train" or "predict".
     """
 
     features_list: list[str] | None = None
+    fixed_cols: list[str] = field(default_factory=lambda: ["studyLocusId", "geneId"])
+    mode: str = "train"
 
     def __post_init__(self: L2GFeatureMatrix) -> None:
-        """Post-initialisation to set the features list. If not provided, all columns except the fixed ones are used."""
-        fixed_cols = ["studyLocusId", "geneId", "goldStandardSet"]
+        """Post-initialisation to set the features list. If not provided, all columns except the fixed ones are used.
+
+        Raises:
+            ValueError: If the mode is neither 'train' nor 'predict'.
+        """
+        if self.mode not in ["train", "predict"]:
+            raise ValueError("Mode should be either 'train' or 'predict'")
+        if self.mode == "train":
+            self.fixed_cols = self.fixed_cols + ["goldStandardSet"]
         self.features_list = self.features_list or [
-            col for col in self._df.columns if col not in fixed_cols
+            col for col in self._df.columns if col not in self.fixed_cols
         ]
         self.validate_schema()
 
@@ -138,7 +149,8 @@ class L2GFeatureMatrix(Dataset):
         return self
 
     def select_features(
-        self: L2GFeatureMatrix, features_list: list[str] | None
+        self: L2GFeatureMatrix,
+        features_list: list[str] | None,
     ) -> L2GFeatureMatrix:
         """Select a subset of features from the feature matrix.
 
@@ -147,25 +159,11 @@ class L2GFeatureMatrix(Dataset):
 
         Returns:
             L2GFeatureMatrix: L2G feature matrix dataset
+
+        Raises:
+            ValueError: If no features have been selected.
         """
-        features_list = features_list or self.features_list
-        fixed_cols = ["studyLocusId", "geneId", "goldStandardSet"]
-        self.df = self._df.select(fixed_cols + features_list)  # type: ignore
-        return self
-
-    def train_test_split(
-        self: L2GFeatureMatrix, fraction: float
-    ) -> tuple[L2GFeatureMatrix, L2GFeatureMatrix]:
-        """Split the dataset into training and test sets.
-
-        Args:
-            fraction (float): Fraction of the dataset to use for training
-
-        Returns:
-            tuple[L2GFeatureMatrix, L2GFeatureMatrix]: Training and test datasets
-        """
-        train, test = self._df.randomSplit([fraction, 1 - fraction], seed=42)
-        return (
-            L2GFeatureMatrix(_df=train, _schema=L2GFeatureMatrix.get_schema()),
-            L2GFeatureMatrix(_df=test, _schema=L2GFeatureMatrix.get_schema()),
-        )
+        if features_list := features_list or self.features_list:
+            self.df = self._df.select(self.fixed_cols + features_list)
+            return self
+        raise ValueError("features_list cannot be None")

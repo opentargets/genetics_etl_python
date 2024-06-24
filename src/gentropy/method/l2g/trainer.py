@@ -3,10 +3,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from functools import partial
+from typing import Any
 
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from pyspark.ml.tuning import CrossValidator
+import pandas as pd
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import train_test_split
+from wandb.data_types import Table
+from wandb.sdk.wandb_init import init as wandb_init
+from wandb.sdk.wandb_sweep import sweep as wandb_sweep
+from wandb.sklearn import plot_classifier
+from wandb.wandb_agent import agent as wandb_agent
 
 from gentropy.dataset.l2g_feature_matrix import L2GFeatureMatrix
 from gentropy.method.l2g.model import LocusToGeneModel
@@ -16,95 +29,177 @@ from gentropy.method.l2g.model import LocusToGeneModel
 class LocusToGeneTrainer:
     """Modelling of what is the most likely causal gene associated with a given locus."""
 
-    _model: LocusToGeneModel
-    train_set: L2GFeatureMatrix
+    model: LocusToGeneModel
+    feature_matrix: L2GFeatureMatrix
 
-    @classmethod
+    # Initialise vars
+    features_list: list[str] | None = None
+    target_labels: list[str] | None = None
+    x_train: pd.DataFrame | None = None
+    y_train: pd.Series | None = None
+    x_test: pd.DataFrame | None = None
+    y_test: pd.Series | None = None
+    wandb_l2g_project_name: str = "gentropy-locus-to-gene"
+
+    def fit(
+        self: LocusToGeneTrainer,
+    ) -> LocusToGeneModel:
+        """Fit the pipeline to the feature matrix dataframe.
+
+        Returns:
+            LocusToGeneModel: Fitted model
+
+        Raises:
+            ValueError: Train data not set, nothing to fit.
+        """
+        if self.x_train is not None and self.y_train is not None:
+            assert (
+                not self.x_train.empty and not self.y_train.empty
+            ), "Train data not set, nothing to fit."
+            fitted_model = self.model.model.fit(X=self.x_train.values, y=self.y_train)
+            self.model = LocusToGeneModel(
+                model=fitted_model,
+                hyperparameters=fitted_model.get_params(),
+                training_data=self.feature_matrix,
+            )
+            return self.model
+        raise ValueError("Train data not set, nothing to fit.")
+
+    def log_to_wandb(
+        self: LocusToGeneTrainer,
+        wandb_run_name: str,
+    ) -> None:
+        """Log evaluation results and feature importance to W&B to compare between different L2G runs.
+
+        Dashboard is available at https://wandb.ai/open-targets/gentropy-locus-to-gene?nw=nwuseropentargets
+        Credentials to access W&B are available at the OT central login sheet.
+
+        Args:
+            wandb_run_name (str): Name of the W&B run
+        """
+        if (
+            self.x_train is not None
+            and self.x_test is not None
+            and self.y_train is not None
+            and self.y_test is not None
+        ):
+            assert (
+                not self.x_train.empty and not self.y_train.empty
+            ), "Train data not set, nothing to evaluate."
+            fitted_classifier = self.model.model
+            y_predicted = fitted_classifier.predict(self.x_test.values)
+            y_probas = fitted_classifier.predict_proba(self.x_test.values)
+            run = wandb_init(
+                project=self.wandb_l2g_project_name,
+                name=wandb_run_name,
+                config=fitted_classifier.get_params(),
+            )
+            # Track classification plots
+            plot_classifier(
+                self.model.model,
+                self.x_train.values,
+                self.x_test.values,
+                self.y_train,
+                self.y_test,
+                y_predicted,
+                y_probas,
+                labels=list(self.model.label_encoder.values()),
+                model_name="L2G-classifier",
+                feature_names=self.features_list,
+                is_binary=True,
+            )
+            # Track evaluation metrics
+            run.log(
+                {
+                    "areaUnderROC": roc_auc_score(
+                        self.y_test, y_probas[:, 1], average="weighted"
+                    )
+                }
+            )
+            run.log({"accuracy": accuracy_score(self.y_test, y_predicted)})
+            run.log(
+                {
+                    "weightedPrecision": precision_score(
+                        self.y_test, y_predicted, average="weighted"
+                    )
+                }
+            )
+            run.log(
+                {
+                    "weightedRecall": recall_score(
+                        self.y_test, y_predicted, average="weighted"
+                    )
+                }
+            )
+            run.log({"f1": f1_score(self.y_test, y_predicted, average="weighted")})
+            # Track gold standards and their features
+            run.log(
+                {"featureMatrix": Table(dataframe=self.feature_matrix.df.toPandas())}
+            )
+            # Log feature missingness
+            run.log(
+                {
+                    "missingnessRates": self.feature_matrix.calculate_feature_missingness_rate()
+                }
+            )
+
     def train(
-        cls: type[LocusToGeneTrainer],
-        gold_standard_data: L2GFeatureMatrix,
-        l2g_model: LocusToGeneModel,
-        evaluate: bool,
-        wandb_run_name: str | None = None,
-        model_path: str | None = None,
-        **hyperparams: dict[str, Any],
+        self: LocusToGeneTrainer,
+        wandb_run_name: str,
     ) -> LocusToGeneModel:
         """Train the Locus to Gene model.
 
         Args:
-            gold_standard_data (L2GFeatureMatrix): Feature matrix for the associations in the gold standard
-            l2g_model (LocusToGeneModel): Model to fit to the data on
-            evaluate (bool): Whether to evaluate the model on a test set
-            wandb_run_name (str | None): Descriptive name for the run to be tracked with W&B
-            model_path (str | None): Path to save the model to
-            **hyperparams (dict[str, Any]): Hyperparameters to use for the model
+            wandb_run_name (str): Name of the W&B run. Unless this is provided, the model will not be logged to W&B.
 
         Returns:
-            LocusToGeneModel: Trained model
+            LocusToGeneModel: Fitted model
         """
-        train, test = gold_standard_data.train_test_split(fraction=0.8)
+        data_df = self.feature_matrix.df.drop("geneId").toPandas()
 
-        model = l2g_model.add_pipeline_stage(l2g_model.estimator).fit(train)
-
-        if evaluate:
-            l2g_model.evaluate(
-                results=model.predict(test),
-                hyperparameters=hyperparams,
-                wandb_run_name=wandb_run_name,
-                gold_standard_data=gold_standard_data,
-            )
-        if model_path:
-            l2g_model.save(model_path)
-        return l2g_model
-
-    @classmethod
-    def cross_validate(
-        cls: type[LocusToGeneTrainer],
-        l2g_model: LocusToGeneModel,
-        data: L2GFeatureMatrix,
-        num_folds: int,
-        param_grid: Optional[list] = None,  # type: ignore
-    ) -> LocusToGeneModel:
-        """Perform k-fold cross validation on the model.
-
-        By providing a model with a parameter grid, this method will perform k-fold cross validation on the model for each
-        combination of parameters and return the best model.
-
-        Args:
-            l2g_model (LocusToGeneModel): Model to fit to the data on
-            data (L2GFeatureMatrix): Data to perform cross validation on
-            num_folds (int): Number of folds to use for cross validation
-            param_grid (Optional[list]): List of parameter maps to use for cross validation
-
-        Returns:
-            LocusToGeneModel: Trained model fitted with the best hyperparameters
-
-        Raises:
-            ValueError: Parameter grid is empty. Cannot perform cross-validation.
-            ValueError: Unable to retrieve the best model.
-        """
-        evaluator = MulticlassClassificationEvaluator()
-        params_grid = param_grid or l2g_model.get_param_grid()
-        if not param_grid:
-            raise ValueError(
-                "Parameter grid is empty. Cannot perform cross-validation."
-            )
-        cv = CrossValidator(
-            numFolds=num_folds,
-            estimator=l2g_model.estimator,
-            estimatorParamMaps=params_grid,
-            evaluator=evaluator,
-            parallelism=2,
-            collectSubModels=False,
-            seed=42,
+        # Encode labels in `goldStandardSet` to a numeric value
+        data_df["goldStandardSet"] = data_df["goldStandardSet"].map(
+            self.model.label_encoder
         )
 
-        l2g_model.add_pipeline_stage(cv)  # type: ignore[assignment, unused-ignore]
+        # Convert all columns to numeric and split
+        data_df = data_df.apply(pd.to_numeric)
+        self.feature_cols = [
+            col
+            for col in data_df.columns
+            if col not in ["studyLocusId", "goldStandardSet"]
+        ]
+        label_col = "goldStandardSet"
+        X = data_df[self.feature_cols].copy()
+        y = data_df[label_col].copy()
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
 
-        # Integrate the best model from the last stage of the pipeline
-        if (full_pipeline_model := l2g_model.fit(data).model) is None or not hasattr(
-            full_pipeline_model, "stages"
-        ):
-            raise ValueError("Unable to retrieve the best model.")
-        l2g_model.model = full_pipeline_model.stages[-1].bestModel  # type: ignore[assignment, unused-ignore]
-        return l2g_model
+        # Train
+        model = self.fit()
+
+        # Evaluate
+        self.log_to_wandb(
+            wandb_run_name=wandb_run_name,
+        )
+
+        return model
+
+    def hyperparameter_tuning(
+        self: LocusToGeneTrainer, wandb_run_name: str, parameter_grid: dict[str, Any]
+    ) -> None:
+        """Perform hyperparameter tuning on the model with W&B Sweeps. Metrics for every combination of hyperparameters will be logged to W&B for comparison.
+
+        Args:
+            wandb_run_name (str): Name of the W&B run
+            parameter_grid (dict[str, Any]): Dictionary containing the hyperparameters to sweep over. The keys are the hyperparameter names, and the values are dictionaries containing the values to sweep over.
+        """
+        sweep_config = {
+            "method": "grid",
+            "metric": {"name": "roc", "goal": "maximize"},
+            "parameters": parameter_grid,
+        }
+        sweep_id = wandb_sweep(sweep_config, project=self.wandb_l2g_project_name)
+
+        wandb_agent(sweep_id, partial(self.train, wandb_run_name=wandb_run_name))

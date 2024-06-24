@@ -2,7 +2,7 @@ defaults:
   - locus_to_gene
 
 run_mode: predict
-model_path: ${datasets.l2g_model}
+model_path: null
 predictions_path: ${datasets.l2g_predictions}
 feature_matrix_path: ${datasets.l2g_feature_matrix}
 credible_set_path: ${datasets.credible_set}

@@ -209,12 +209,12 @@ class LocusToGeneConfig(StepConfig):
         }
     )
     run_mode: str = MISSING
-    model_path: str = MISSING
     predictions_path: str = MISSING
     credible_set_path: str = MISSING
     variant_gene_path: str = MISSING
     colocalisation_path: str = MISSING
     study_index_path: str = MISSING
+    model_path: str | None = None
     feature_matrix_path: str | None = None
     gold_standard_curation_path: str | None = None
     gene_interactions_path: str | None = None
@@ -248,28 +248,34 @@ class LocusToGeneConfig(StepConfig):
             "tuqtlColocClppMaximum",
             # max clpp for each (study, locus, gene) aggregating over all tuQTLs
             "tuqtlColocClppMaximumNeighborhood",
-            # # max log-likelihood ratio value for each (study, locus, gene) aggregating over all eQTLs
-            # "eqtlColocLlrLocalMaximum",
-            # # max log-likelihood ratio value for each (study, locus) aggregating over all eQTLs
-            # "eqtlColocLlpMaximumNeighborhood",
-            # # max log-likelihood ratio value for each (study, locus, gene) aggregating over all pQTLs
-            # "pqtlColocLlrLocalMaximum",
-            # # max log-likelihood ratio value for each (study, locus) aggregating over all pQTLs
-            # "pqtlColocLlpMaximumNeighborhood",
-            # # max log-likelihood ratio value for each (study, locus, gene) aggregating over all sQTLs
-            # "sqtlColocLlrLocalMaximum",
-            # # max log-likelihood ratio value for each (study, locus) aggregating over all sQTLs
-            # "sqtlColocLlpMaximumNeighborhood",
+            # max log-likelihood ratio value for each (study, locus, gene) aggregating over all eQTLs
+            "eqtlColocLlrMaximum",
+            # max log-likelihood ratio value for each (study, locus) aggregating over all eQTLs
+            "eqtlColocLlrMaximumNeighborhood",
+            # max log-likelihood ratio value for each (study, locus, gene) aggregating over all pQTLs
+            "pqtlColocLlrMaximum",
+            # max log-likelihood ratio value for each (study, locus) aggregating over all pQTLs
+            "pqtlColocLlrMaximumNeighborhood",
+            # max log-likelihood ratio value for each (study, locus, gene) aggregating over all sQTLs
+            "sqtlColocLlrMaximum",
+            # max log-likelihood ratio value for each (study, locus) aggregating over all sQTLs
+            "sqtlColocLlrMaximumNeighborhood",
+            # max log-likelihood ratio value for each (study, locus, gene) aggregating over all tuQTLs
+            "tuqtlColocLlrMaximum",
+            # max log-likelihood ratio value for each (study, locus) aggregating over all tuQTLs
+            "tuqtlColocLlrMaximumNeighborhood",
         ]
     )
     hyperparameters: dict[str, Any] = field(
         default_factory=lambda: {
+            "n_estimators": 100,
             "max_depth": 5,
-            "loss_function": "binary:logistic",
+            "loss": "log_loss",
         }
     )
     wandb_run_name: str | None = None
-    perform_cross_validation: bool = False
+    hf_hub_repo_id: str | None = "opentargets/locus_to_gene"
+    download_from_hub: bool = True
     _target_: str = "gentropy.l2g.LocusToGeneStep"
 
 

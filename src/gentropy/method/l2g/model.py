@@ -2,307 +2,243 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type
 
-from pyspark.ml import Pipeline, PipelineModel
-from pyspark.ml.evaluation import (
-    BinaryClassificationEvaluator,
-    MulticlassClassificationEvaluator,
-)
-from pyspark.ml.feature import StringIndexer, VectorAssembler
-from pyspark.ml.tuning import ParamGridBuilder
-from wandb.data_types import Table
-from wandb.sdk import init as wandb_init
-from wandb.wandb_run import Run
-from xgboost.spark.core import SparkXGBClassifierModel
+import skops.io as sio
+from pandas import DataFrame as pd_dataframe
+from pandas import to_numeric as pd_to_numeric
+from sklearn.ensemble import GradientBoostingClassifier
+from skops import hub_utils
 
-from gentropy.dataset.l2g_feature_matrix import L2GFeatureMatrix
-from gentropy.method.l2g.evaluator import WandbEvaluator
+from gentropy.common.session import Session
+from gentropy.common.utils import copy_to_gcs
 
 if TYPE_CHECKING:
-    from pyspark.ml import Transformer
-    from pyspark.sql import DataFrame
+    from gentropy.dataset.l2g_feature_matrix import L2GFeatureMatrix
+    from gentropy.dataset.l2g_prediction import L2GPrediction
 
 
 @dataclass
 class LocusToGeneModel:
     """Wrapper for the Locus to Gene classifier."""
 
-    features_list: list[str]
-    estimator: Any = None
-    pipeline: Pipeline = Pipeline(stages=[])
-    model: PipelineModel | None = None
-    wandb_l2g_project_name: str = "otg_l2g"
+    model: Any = GradientBoostingClassifier(random_state=42)
+    hyperparameters: dict[str, Any] | None = None
+    training_data: L2GFeatureMatrix | None = None
+    label_encoder: dict[str, int] = field(
+        default_factory=lambda: {
+            "negative": 0,
+            "positive": 1,
+        }
+    )
 
     def __post_init__(self: LocusToGeneModel) -> None:
-        """Post init that adds the model to the ML pipeline."""
-        label_indexer = StringIndexer(
-            inputCol="goldStandardSet", outputCol="label", handleInvalid="keep"
-        )
-        vector_assembler = LocusToGeneModel.features_vector_assembler(
-            self.features_list
-        )
-
-        self.pipeline = Pipeline(
-            stages=[
-                label_indexer,
-                vector_assembler,
-            ]
-        )
-
-    def save(self: LocusToGeneModel, path: str) -> None:
-        """Saves fitted pipeline model to disk.
-
-        Args:
-            path (str): Path to save the model to
-
-        Raises:
-            ValueError: If the model has not been fitted yet
-        """
-        if self.model is None:
-            raise ValueError("Model has not been fitted yet.")
-        self.model.write().overwrite().save(path)
-
-    @property
-    def classifier(self: LocusToGeneModel) -> Any:
-        """Return the model.
-
-        Returns:
-            Any: An estimator object from Spark ML
-        """
-        return self.estimator
-
-    @staticmethod
-    def features_vector_assembler(features_cols: list[str]) -> VectorAssembler:
-        """Spark transformer to assemble the feature columns into a vector.
-
-        Args:
-            features_cols (list[str]): List of feature columns to assemble
-
-        Returns:
-            VectorAssembler: Spark transformer to assemble the feature columns into a vector
-
-        Examples:
-            >>> from pyspark.ml.feature import VectorAssembler
-            >>> df = spark.createDataFrame([(5.2, 3.5)], schema="feature_1 FLOAT, feature_2 FLOAT")
-            >>> assembler = LocusToGeneModel.features_vector_assembler(["feature_1", "feature_2"])
-            >>> assembler.transform(df).show()
-            +---------+---------+--------------------+
-            |feature_1|feature_2|            features|
-            +---------+---------+--------------------+
-            |      5.2|      3.5|[5.19999980926513...|
-            +---------+---------+--------------------+
-            <BLANKLINE>
-        """
-        return (
-            VectorAssembler(handleInvalid="error")
-            .setInputCols(features_cols)
-            .setOutputCol("features")
-        )
-
-    def log_to_wandb(
-        self: LocusToGeneModel,
-        results: DataFrame,
-        training_data: L2GFeatureMatrix,
-        evaluators: list[
-            BinaryClassificationEvaluator | MulticlassClassificationEvaluator
-        ],
-        wandb_run: Run,
-    ) -> None:
-        """Log evaluation results and feature importance to W&B.
-
-        Args:
-            results (DataFrame): Dataframe containing the predictions
-            training_data (L2GFeatureMatrix): Training data used for the model. If provided, the table and the number of positive and negative labels will be logged to W&B
-            evaluators (list[BinaryClassificationEvaluator | MulticlassClassificationEvaluator]): List of Spark ML evaluators to use for evaluation
-            wandb_run (Run): W&B run to log the results to
-        """
-        ## Track evaluation metrics
-        for evaluator in evaluators:
-            wandb_evaluator = WandbEvaluator(
-                spark_ml_evaluator=evaluator, wandb_run=wandb_run
-            )
-            wandb_evaluator.evaluate(results)
-        ## Track feature importance
-        wandb_run.log({"importances": self.get_feature_importance()})
-        ## Track training set
-        training_table = Table(dataframe=training_data.df.toPandas())
-        wandb_run.log({"trainingSet": training_table})
-        # Count number of positive and negative labels
-        gs_counts_dict = {
-            "goldStandard" + row["goldStandardSet"].capitalize(): row["count"]
-            for row in training_data.df.groupBy("goldStandardSet").count().collect()
-        }
-        wandb_run.log(gs_counts_dict)
-        # Missingness rates
-        wandb_run.log(
-            {"missingnessRates": training_data.calculate_feature_missingness_rate()}
-        )
+        """Post-initialisation to fit the estimator with the provided params."""
+        if self.hyperparameters:
+            self.model.set_params(**self.hyperparameters_dict)
 
     @classmethod
     def load_from_disk(
-        cls: Type[LocusToGeneModel], path: str, features_list: list[str]
+        cls: Type[LocusToGeneModel], path: str | Path
     ) -> LocusToGeneModel:
-        """Load a fitted pipeline model from disk.
+        """Load a fitted model from disk.
 
         Args:
-            path (str): Path to the model
-            features_list (list[str]): List of features used for the model
+            path (str | Path): Path to the model
 
         Returns:
             LocusToGeneModel: L2G model loaded from disk
-        """
-        return cls(model=PipelineModel.load(path), features_list=features_list)
-
-    @classifier.setter  # type: ignore
-    def classifier(self: LocusToGeneModel, new_estimator: Any) -> None:
-        """Set the model.
-
-        Args:
-            new_estimator (Any): An estimator object from Spark ML
-        """
-        self.estimator = new_estimator
-
-    def get_param_grid(self: LocusToGeneModel) -> list[Any]:
-        """Return the parameter grid for the model.
-
-        Returns:
-            list[Any]: List of parameter maps to use for cross validation
-        """
-        return (
-            ParamGridBuilder()
-            .addGrid(self.estimator.max_depth, [3, 5, 7])
-            .addGrid(self.estimator.learning_rate, [0.01, 0.1, 1.0])
-            .build()
-        )
-
-    def add_pipeline_stage(
-        self: LocusToGeneModel, transformer: Transformer
-    ) -> LocusToGeneModel:
-        """Adds a stage to the L2G pipeline.
-
-        Args:
-            transformer (Transformer): Spark transformer to add to the pipeline
-
-        Returns:
-            LocusToGeneModel: L2G model with the new transformer
-
-        Examples:
-            >>> from pyspark.ml.regression import LinearRegression
-            >>> estimator = LinearRegression()
-            >>> test_model = LocusToGeneModel(features_list=["a", "b"])
-            >>> print(len(test_model.pipeline.getStages()))
-            2
-            >>> print(len(test_model.add_pipeline_stage(estimator).pipeline.getStages()))
-            3
-        """
-        pipeline_stages = self.pipeline.getStages()
-        new_stages = pipeline_stages + [transformer]
-        self.pipeline = Pipeline(stages=new_stages)
-        return self
-
-    def evaluate(
-        self: LocusToGeneModel,
-        results: DataFrame,
-        hyperparameters: dict[str, Any],
-        wandb_run_name: str | None,
-        gold_standard_data: L2GFeatureMatrix | None = None,
-    ) -> None:
-        """Perform evaluation of the model predictions for the test set and track the results with W&B.
-
-        Args:
-            results (DataFrame): Dataframe containing the predictions
-            hyperparameters (dict[str, Any]): Hyperparameters used for the model
-            wandb_run_name (str | None): Descriptive name for the run to be tracked with W&B
-            gold_standard_data (L2GFeatureMatrix | None): Feature matrix for the associations in the gold standard. If provided, the ratio of positive to negative labels will be logged to W&B
-        """
-        binary_evaluator = BinaryClassificationEvaluator(
-            rawPredictionCol="rawPrediction", labelCol="label"
-        )
-        multi_evaluator = MulticlassClassificationEvaluator(
-            labelCol="label", predictionCol="prediction"
-        )
-
-        if wandb_run_name and gold_standard_data:
-            run = wandb_init(
-                project=self.wandb_l2g_project_name,
-                config=hyperparameters,
-                name=wandb_run_name,
-            )
-            if isinstance(run, Run):
-                self.log_to_wandb(
-                    results,
-                    gold_standard_data,
-                    [binary_evaluator, multi_evaluator],
-                    run,
-                )
-                run.finish()
-
-    @property
-    def feature_name_map(self: LocusToGeneModel) -> dict[str, str]:
-        """Return a dictionary mapping encoded feature names to the original names.
-
-        Returns:
-            dict[str, str]: Feature name map of the model
 
         Raises:
             ValueError: If the model has not been fitted yet
         """
-        if not self.model:
-            raise ValueError("Model not fitted yet. `fit()` has to be called first.")
-        elif isinstance(self.model.stages[1], VectorAssembler):
-            feature_names = self.model.stages[1].getInputCols()
-        return {f"f{i}": feature_name for i, feature_name in enumerate(feature_names)}
+        loaded_model = sio.load(path, trusted=True)
+        if not loaded_model._is_fitted():
+            raise ValueError("Model has not been fitted yet.")
+        return cls(model=loaded_model)
 
-    def get_feature_importance(self: LocusToGeneModel) -> dict[str, float]:
-        """Return dictionary with relative importances of every feature in the model. Feature names are encoded and have to be mapped back to their original names.
-
-        Returns:
-            dict[str, float]: Dictionary mapping feature names to their importance
-
-        Raises:
-            ValueError: If the model has not been fitted yet or is not an XGBoost model
-        """
-        if not self.model or not isinstance(
-            self.model.stages[-1], SparkXGBClassifierModel
-        ):
-            raise ValueError(
-                f"Model type {type(self.model)} not supported for feature importance."
-            )
-        importance_map = self.model.stages[-1].get_feature_importances()
-        return {self.feature_name_map[k]: v for k, v in importance_map.items()}
-
-    def fit(
-        self: LocusToGeneModel,
-        feature_matrix: L2GFeatureMatrix,
+    @classmethod
+    def load_from_hub(
+        cls: Type[LocusToGeneModel],
+        model_id: str,
+        hf_token: str | None = None,
+        model_name: str = "classifier.skops",
     ) -> LocusToGeneModel:
-        """Fit the pipeline to the feature matrix dataframe.
+        """Load a model from the Hugging Face Hub. This will download the model from the hub and load it from disk.
 
         Args:
-            feature_matrix (L2GFeatureMatrix): Feature matrix dataframe to fit the model to
+            model_id (str): Model ID on the Hugging Face Hub
+            hf_token (str | None): Hugging Face Hub token to download the model (only required if private)
+            model_name (str): Name of the persisted model to load. Defaults to "classifier.skops".
 
         Returns:
-            LocusToGeneModel: Fitted model
+            LocusToGeneModel: L2G model loaded from the Hugging Face Hub
         """
-        self.model = self.pipeline.fit(feature_matrix.df)
-        return self
+        local_path = Path(model_id)
+        hub_utils.download(repo_id=model_id, dst=local_path, token=hf_token)
+        return cls.load_from_disk(Path(local_path) / model_name)
+
+    @property
+    def hyperparameters_dict(self) -> dict[str, Any]:
+        """Return hyperparameters as a dictionary.
+
+        Returns:
+            dict[str, Any]: Hyperparameters
+
+        Raises:
+            ValueError: If hyperparameters have not been set
+        """
+        if not self.hyperparameters:
+            raise ValueError("Hyperparameters have not been set.")
+        elif isinstance(self.hyperparameters, dict):
+            return self.hyperparameters
+        return self.hyperparameters.default_factory()
 
     def predict(
         self: LocusToGeneModel,
         feature_matrix: L2GFeatureMatrix,
-    ) -> DataFrame:
+        session: Session,
+    ) -> L2GPrediction:
         """Apply the model to a given feature matrix dataframe. The feature matrix needs to be preprocessed first.
 
         Args:
-            feature_matrix (L2GFeatureMatrix): Feature matrix dataframe to apply the model to
+            feature_matrix (L2GFeatureMatrix): Feature matrix to apply the model to.
+            session (Session): Session object to convert data to Spark
 
         Returns:
-            DataFrame: Dataframe with predictions
+            L2GPrediction: Dataset containing credible sets and their L2G scores
+        """
+        from gentropy.dataset.l2g_prediction import L2GPrediction
+
+        pd_dataframe.iteritems = pd_dataframe.items
+
+        feature_matrix_pdf = feature_matrix.df.toPandas()
+        # L2G score is the probability the classifier assigns to the positive class (the second element in the probability array)
+        feature_matrix_pdf["score"] = self.model.predict_proba(
+            # We drop the fixed columns to only pass the feature values to the classifier
+            feature_matrix_pdf.drop(feature_matrix.fixed_cols, axis=1)
+            .apply(pd_to_numeric)
+            .values
+        )[:, 1]
+        output_cols = [field.name for field in L2GPrediction.get_schema().fields]
+        return L2GPrediction(
+            _df=session.spark.createDataFrame(feature_matrix_pdf.filter(output_cols)),
+            _schema=L2GPrediction.get_schema(),
+        )
+
+    def save(self: LocusToGeneModel, path: str) -> None:
+        """Saves fitted model to disk using the skops persistence format.
+
+        Args:
+            path (str): Path to save the persisted model. Should end with .skops
 
         Raises:
             ValueError: If the model has not been fitted yet
+            ValueError: If the path does not end with .skops
         """
-        if not self.model:
-            raise ValueError("Model not fitted yet. `fit()` has to be called first.")
-        return self.model.transform(feature_matrix.df)
+        if self.model is None:
+            raise ValueError("Model has not been fitted yet.")
+        if not path.endswith(".skops"):
+            raise ValueError("Path should end with .skops")
+        if path.startswith("gs://"):
+            local_path = path.split("/")[-1]
+            sio.dump(self.model, local_path)
+            copy_to_gcs(local_path, path)
+        else:
+            sio.dump(self.model, path)
+
+    def _create_hugging_face_model_card(
+        self: LocusToGeneModel,
+        local_repo: str,
+    ) -> None:
+        """Create a model card to document the model in the hub. The model card is saved in the local repo before pushing it to the hub.
+
+        Args:
+            local_repo (str): Path to the folder where the README file will be saved to be pushed to the Hugging Face Hub
+        """
+        from skops import card
+
+        # Define card metadata
+        description = """The locus-to-gene (L2G) model derives features to prioritise likely causal genes at each GWAS locus based on genetic and functional genomics features. The main categories of predictive features are:
+
+        - Distance: (from credible set variants to gene)
+        - Molecular QTL Colocalization
+        - Chromatin Interaction: (e.g., promoter-capture Hi-C)
+        - Variant Pathogenicity: (from VEP)
+
+        More information at: https://opentargets.github.io/gentropy/python_api/methods/l2g/_l2g/
+        """
+        how_to = """To use the model, you can load it using the `LocusToGeneModel.load_from_hub` method. This will return a `LocusToGeneModel` object that can be used to make predictions on a feature matrix.
+        The model can then be used to make predictions using the `predict` method.
+
+        More information can be found at: https://opentargets.github.io/gentropy/python_api/methods/l2g/model/
+        """
+        model_card = card.Card(
+            self.model,
+            metadata=card.metadata_from_config(Path(local_repo)),
+        )
+        model_card.add(
+            **{
+                "Model description": description,
+                "Model description/Training Procedure": "Gradient Boosting Classifier",
+                "How to Get Started with the Model": how_to,
+                "Model Card Authors": "Open Targets",
+                "License": "MIT",
+                "Citation": "https://doi.org/10.1038/s41588-021-00945-5",
+            }
+        )
+        model_card.delete("Model description/Training Procedure/Model Plot")
+        model_card.delete("Model description/Evaluation Results")
+        model_card.delete("Model Card Authors")
+        model_card.delete("Model Card Contact")
+        model_card.save(Path(local_repo) / "README.md")
+
+    def export_to_hugging_face_hub(
+        self: LocusToGeneModel,
+        model_path: str,
+        hf_hub_token: str,
+        data: pd_dataframe,
+        commit_message: str,
+        repo_id: str = "opentargets/locus_to_gene",
+        local_repo: str = "locus_to_gene",
+    ) -> None:
+        """Share the model on Hugging Face Hub.
+
+        Args:
+            model_path (str): The path to the L2G model file.
+            hf_hub_token (str): Hugging Face Hub token
+            data (pd_dataframe): Data used to train the model. This is used to have an example input for the model and to store the column order.
+            commit_message (str): Commit message for the push
+            repo_id (str): The Hugging Face Hub repo id where the model will be stored.
+            local_repo (str): Path to the folder where the contents of the model repo + the documentation are located. This is used to push the model to the Hugging Face Hub.
+
+        Raises:
+            Exception: If the push to the Hugging Face Hub fails
+        """
+        from sklearn import __version__ as sklearn_version
+
+        try:
+            hub_utils.init(
+                model=model_path,
+                requirements=[f"scikit-learn={sklearn_version}"],
+                dst=local_repo,
+                task="tabular-classification",
+                data=data,
+            )
+            self._create_hugging_face_model_card(local_repo)
+            hub_utils.push(
+                repo_id=repo_id,
+                source=local_repo,
+                token=hf_hub_token,
+                commit_message=commit_message,
+                create_remote=True,
+            )
+        except Exception as e:
+            # remove the local repo if the push fails
+            if Path(local_repo).exists():
+                for p in Path(local_repo).glob("*"):
+                    p.unlink()
+                Path(local_repo).rmdir()
+            raise e
