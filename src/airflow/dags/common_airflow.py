@@ -112,6 +112,7 @@ def create_cluster(
         num_workers=num_workers,
         image_version=GCP_DATAPROC_IMAGE,
         enable_component_gateway=True,
+        optional_components=["JUPYTER"],
         init_actions_uris=INITIALISATION_EXECUTABLE_FILE,
         metadata={
             "CONFIGTAR": CONFIG_TAG,
