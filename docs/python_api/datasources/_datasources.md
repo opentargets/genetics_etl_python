@@ -10,6 +10,7 @@ This section contains information about the data source harmonisation tools avai
 
 1. [GWAS Catalog](gwas_catalog/_gwas_catalog.md) (with or without full summary statistics)
 1. [FinnGen](finngen/_finngen.md)
+1. [UKB PPP (EUR)](ukb_ppp_eur/_ukb_ppp_eur.md)
 
 ## Molecular QTLs
 

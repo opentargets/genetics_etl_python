@@ -267,19 +267,19 @@ def neglog_pvalue_to_mantissa_and_exponent(p_value: Column) -> tuple[Column, Col
         ... .select('negLogPv',*neglog_pvalue_to_mantissa_and_exponent(f.col('negLogPv')))
         ... .show()
         ... )
-        +--------+------------------+--------------+
-        |negLogPv|    pValueMantissa|pValueExponent|
-        +--------+------------------+--------------+
-        |    4.56|  3.63078054770101|            -5|
-        | 2109.23|1.6982436524618154|         -2110|
-        +--------+------------------+--------------+
+        +--------+--------------+--------------+
+        |negLogPv|pValueMantissa|pValueExponent|
+        +--------+--------------+--------------+
+        |    4.56|     3.6307805|            -5|
+        | 2109.23|     1.6982436|         -2110|
+        +--------+--------------+--------------+
         <BLANKLINE>
     """
     exponent: Column = f.ceil(p_value)
     mantissa: Column = f.pow(f.lit(10), (p_value - exponent + f.lit(1)))
 
     return (
-        mantissa.cast(t.DoubleType()).alias("pValueMantissa"),
+        mantissa.cast(t.FloatType()).alias("pValueMantissa"),
         (-1 * exponent).cast(t.IntegerType()).alias("pValueExponent"),
     )
 

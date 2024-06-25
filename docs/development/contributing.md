@@ -41,7 +41,7 @@ In order to run the code:
    - Note that the version must comply with [PEP440 conventions](https://peps.python.org/pep-0440/#normalization), otherwise Poetry will not allow it to be deployed.
    - Do not use underscores or hyphens in your version name. When building the WHL file, they will be automatically converted to dots, which means the file name will no longer match the version and the build will fail. Use dots instead.
 
-3. Manually edit your local `src/airflow/dags/common_airflow.py` and set `OTG_VERSION` to the same version as you did in the previous step.
+3. Manually edit your local `src/airflow/dags/common_airflow.py` and set `GENTROPY_VERSION` to the same version as you did in the previous step.
 
 4. Run `make build`.
 
@@ -66,21 +66,27 @@ For more details on each of these steps, see the sections below.
 
 - If during development you had a question which wasn't covered in the documentation, and someone explained it to you, add it to the documentation. The same applies if you encountered any instructions in the documentation which were obsolete or incorrect.
 - Documentation autogeneration expressions start with `:::`. They will automatically generate sections of the documentation based on class and method docstrings. Be sure to update them for:
-  - Dataset definitions in `docs/python_api/datasource/STEP` (example: `docs/python_api/datasource/finngen/study_index.md`)
-  - Step definition in `docs/python_api/step/STEP.md` (example: `docs/python_api/step/finngen.md`)
+  - Datasource main page, for example: `docs/python_api/datasources/finngen/_finngen.md`
+  - Dataset definitions, for example: `docs/python_api/datasources/finngen/study_index.md`
+  - Step definition, for example: `docs/python_api/steps/finngen_sumstat_preprocess.md`
 
 ### Configuration
 
-- Input and output paths in `config/datasets/gcp.yaml`
-- Step configuration in `config/step/STEP.yaml` (example: `config/step/finngen.yaml`)
+- Input and output paths in `config/datasets/ot_gcp.yaml`
+- Step configuration, for example: `config/step/ot_finngen_sumstat_preprocess.yaml`
 
 ### Classes
 
-- Dataset class in `src/gentropy/datasource/STEP` (example: `src/gentropy/datasource/finngen/study_index.py` → `FinnGenStudyIndex`)
-- Step main running class in `src/gentropy/STEP.py` (example: `src/gentropy/finngen.py`)
+- Datasource init, for example: `src/gentropy/datasource/finngen/__init__.py`
+- Dataset classes, for example: `src/gentropy/datasource/finngen/study_index.py` → `FinnGenStudyIndex`
+- Step main running class, for example: `src/gentropy/finngen_sumstat_preprocess.py`
 
 ### Tests
 
-- Test study fixture in `tests/conftest.py` (example: `mock_study_index_finngen` in that module)
-- Test sample data in `tests/data_samples` (example: `tests/gentropy/data_samples/finngen_studies_sample.json`)
-- Test definition in `tests/` (example: `tests/dataset/test_study_index.py` → `test_study_index_finngen_creation`)
+- Test study fixture in `tests/conftest.py`, for example: `mock_study_index_finngen` in that module
+- Test sample data, for example: `tests/gentropy/data_samples/finngen_studies_sample.json`
+- Test definition, for example: `tests/dataset/test_study_index.py` → `test_study_index_finngen_creation`)
+
+### Orchestration
+
+- Airflow DAG, for example: `src/airflow/dags/finngen_harmonisation.py`

@@ -1,0 +1,13 @@
+defaults:
+  - ukb_ppp_eur_sumstat_preprocess
+
+raw_study_index_path: ???
+raw_summary_stats_path: ???
+variant_annotation_path: ???
+tmp_variant_annotation_path: ???
+study_index_output_path: ???
+summary_stats_output_path: ???
+
+session:
+  extended_spark_conf:
+    "spark.sql.shuffle.partitions": "3200"
