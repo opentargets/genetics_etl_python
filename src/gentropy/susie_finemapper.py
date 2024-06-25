@@ -47,7 +47,6 @@ class SusieFineMapperStep:
         study_locus_collected_path: str,
         study_index_path: str,
         output_path: str,
-        locus_radius: int = 500_000,
         max_causal_snps: int = 10,
         primary_signal_pval_threshold: float = 1,
         secondary_signal_pval_threshold: float = 1,
@@ -71,7 +70,6 @@ class SusieFineMapperStep:
             study_locus_collected_path (str): path to the collected study locus
             study_index_path (str): path to the study index
             output_path (str): path to the output
-            locus_radius (int): Radius of base-pair window around the locus, default is 500_000
             max_causal_snps (int): Maximum number of causal variants in locus, default is 10
             primary_signal_pval_threshold (float): p-value threshold for the lead variant from the primary signal (credibleSetIndex==1), default is 5e-8
             secondary_signal_pval_threshold (float): p-value threshold for the lead variant from the secondary signals, default is 1e-7
