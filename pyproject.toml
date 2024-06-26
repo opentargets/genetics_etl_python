@@ -266,3 +266,4 @@ check-return-types = true
 allow-init-docstring = true
 arg-type-hints-in-docstring = true
 skip-checking-short-docstrings = false
+check-class-attributes = false
