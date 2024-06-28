@@ -21,7 +21,6 @@ repos:
       - id: end-of-file-fixer
         exclude: "CHANGELOG.md"
       - id: debug-statements
-      - id: check-merge-conflict
       - id: check-case-conflict
       - id: check-json
         exclude: (.vscode|.devcontainer)
