@@ -1,4 +1,5 @@
 """Step to generate an GWAS Catalog study identifier inclusion and exclusion list."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -6,7 +7,7 @@ from typing import TYPE_CHECKING
 from pyspark.sql import functions as f
 
 from gentropy.common.session import Session
-from gentropy.dataset.variant_annotation import VariantAnnotation
+from gentropy.dataset.variant_index import VariantIndex
 from gentropy.datasource.gwas_catalog.associations import (
     GWASCatalogCuratedAssociationsParser,
 )
@@ -84,7 +85,7 @@ class GWASCatalogStudyInclusionGenerator:
     @staticmethod
     def get_gwas_catalog_study_index(
         session: Session,
-        variant_annotation_path: str,
+        gnomad_variant_path: str,
         catalog_study_files: list[str],
         catalog_ancestry_files: list[str],
         harmonised_study_file: str,
@@ -95,7 +96,7 @@ class GWASCatalogStudyInclusionGenerator:
 
         Args:
             session (Session): Session object.
-            variant_annotation_path (str): Input variant annotation path.
+            gnomad_variant_path (str): Path to GnomAD variant list.
             catalog_study_files (list[str]): List of raw GWAS catalog studies file.
             catalog_ancestry_files (list[str]): List of raw ancestry annotations files from GWAS Catalog.
             harmonised_study_file (str): GWAS Catalog summary statistics lookup table.
@@ -106,7 +107,7 @@ class GWASCatalogStudyInclusionGenerator:
             StudyIndexGWASCatalog: Completely processed and fully annotated study index.
         """
         # Extract
-        va = VariantAnnotation.from_parquet(session, variant_annotation_path)
+        gnomad_variants = VariantIndex.from_parquet(session, gnomad_variant_path)
         catalog_studies = session.spark.read.csv(
             list(catalog_study_files), sep="\t", header=True
         )
@@ -130,7 +131,9 @@ class GWASCatalogStudyInclusionGenerator:
                 ancestry_lut,
                 sumstats_lut,
             ).annotate_from_study_curation(gwas_catalog_study_curation),
-            GWASCatalogCuratedAssociationsParser.from_source(catalog_associations, va),
+            GWASCatalogCuratedAssociationsParser.from_source(
+                catalog_associations, gnomad_variants
+            ),
         )
 
         return study_index
@@ -142,7 +145,7 @@ class GWASCatalogStudyInclusionGenerator:
         catalog_ancestry_files: list[str],
         catalog_associations_file: str,
         gwas_catalog_study_curation_file: str,
-        variant_annotation_path: str,
+        gnomad_variant_path: str,
         harmonised_study_file: str,
         criteria: str,
         inclusion_list_path: str,
@@ -151,12 +154,12 @@ class GWASCatalogStudyInclusionGenerator:
         """Run step.
 
         Args:
-            session (Session): Session object.
+            session (Session): Session objecct.
             catalog_study_files (list[str]): List of raw GWAS catalog studies file.
             catalog_ancestry_files (list[str]): List of raw ancestry annotations files from GWAS Catalog.
             catalog_associations_file (str): Raw GWAS catalog associations file.
             gwas_catalog_study_curation_file (str): file of the curation table. Optional.
-            variant_annotation_path (str): Input variant annotation path.
+            gnomad_variant_path (str): Path to GnomAD variant list.
             harmonised_study_file (str): GWAS Catalog summary statistics lookup table.
             criteria (str): name of the filter set to be applied.
             inclusion_list_path (str): Output path for the inclusion list.
@@ -165,7 +168,7 @@ class GWASCatalogStudyInclusionGenerator:
         # Create study index:
         study_index = self.get_gwas_catalog_study_index(
             session,
-            variant_annotation_path,
+            gnomad_variant_path,
             catalog_study_files,
             catalog_ancestry_files,
             harmonised_study_file,

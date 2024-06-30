@@ -1,5 +1,5 @@
 ---
-title: variant_annotation
+title: GnomAD variant data ingestion
 ---
 
-::: gentropy.variant_annotation.VariantAnnotationStep
+::: gentropy.gnomad_ingestion.GnomadVariantIndexStep

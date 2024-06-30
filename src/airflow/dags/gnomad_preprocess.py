@@ -1,4 +1,4 @@
-"""Airflow DAG for the Preprocess part of the pipeline."""
+"""Airflow DAG for the Preprocess GnomAD datasets - LD index and GnomAD variant set."""
 
 from __future__ import annotations
 
@@ -11,13 +11,13 @@ CLUSTER_NAME = "gnomad-preprocess"
 
 ALL_STEPS = [
     "ot_ld_index",
-    "ot_variant_annotation",
+    "ot_gnomad_variants",
 ]
 
 
 with DAG(
     dag_id=Path(__file__).stem,
-    description="Open Targets Genetics — Preprocess",
+    description="Open Targets Genetics — GnomAD Preprocess",
     default_args=common.shared_dag_args,
     **common.shared_dag_kwargs,
 ):

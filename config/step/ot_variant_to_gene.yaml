@@ -2,7 +2,6 @@ defaults:
   - variant_to_gene
 
 variant_index_path: ${datasets.variant_index}
-variant_annotation_path: ${datasets.variant_annotation}
 gene_index_path: ${datasets.gene_index}
 vep_consequences_path: ${datasets.vep_consequences}
 liftover_chain_file_path: ${datasets.chain_37_38}
@@ -11,4 +10,4 @@ interval_sources:
   javierre: ${datasets.javierre}
   jung: ${datasets.jung}
   thurman: ${datasets.thurman}
-v2g_path: ${datasets.v2g}
+v2g_path: ${datasets.variant_to_gene}

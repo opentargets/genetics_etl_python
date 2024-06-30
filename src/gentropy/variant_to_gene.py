@@ -1,16 +1,16 @@
 """Step to generate variant annotation dataset."""
+
 from __future__ import annotations
 
 from functools import reduce
 
-import pyspark.sql.functions as f
+from pyspark.sql import functions as f
 
 from gentropy.common.Liftover import LiftOverSpark
 from gentropy.common.session import Session
 from gentropy.dataset.gene_index import GeneIndex
 from gentropy.dataset.intervals import Intervals
 from gentropy.dataset.v2g import V2G
-from gentropy.dataset.variant_annotation import VariantAnnotation
 from gentropy.dataset.variant_index import VariantIndex
 
 
@@ -26,7 +26,6 @@ class V2GStep:
     Attributes:
         session (Session): Session object.
         variant_index_path (str): Input variant index path.
-        variant_annotation_path (str): Input variant annotation path.
         gene_index_path (str): Input gene index path.
         vep_consequences_path (str): Input VEP consequences path.
         liftover_chain_file_path (str): Path to GRCh37 to GRCh38 chain file.
@@ -41,7 +40,6 @@ class V2GStep:
         self,
         session: Session,
         variant_index_path: str,
-        variant_annotation_path: str,
         gene_index_path: str,
         vep_consequences_path: str,
         liftover_chain_file_path: str,
@@ -56,7 +54,6 @@ class V2GStep:
         Args:
             session (Session): Session object.
             variant_index_path (str): Input variant index path.
-            variant_annotation_path (str): Input variant annotation path.
             gene_index_path (str): Input gene index path.
             vep_consequences_path (str): Input VEP consequences path.
             liftover_chain_file_path (str): Path to GRCh37 to GRCh38 chain file.
@@ -69,16 +66,10 @@ class V2GStep:
         # Read
         gene_index = GeneIndex.from_parquet(session, gene_index_path)
         vi = VariantIndex.from_parquet(session, variant_index_path).persist()
-        va = VariantAnnotation.from_parquet(session, variant_annotation_path)
+        # Reading VEP consequence to score table and cast the score to the right type:
         vep_consequences = session.spark.read.csv(
             vep_consequences_path, sep="\t", header=True
-        ).select(
-            f.element_at(f.split("Accession", r"/"), -1).alias(
-                "variantFunctionalConsequenceId"
-            ),
-            f.col("Term").alias("label"),
-            f.col("v2g_score").cast("double").alias("score"),
-        )
+        ).withColumn("score", f.col("score").cast("double"))
 
         # Transform
         lift = LiftOverSpark(
@@ -90,10 +81,7 @@ class V2GStep:
             # Filter gene index by approved biotypes to define V2G gene universe
             list(approved_biotypes)
         )
-        va_slimmed = va.filter_by_variant_df(
-            # Variant annotation reduced to the variant index to define V2G variant universe
-            vi.df
-        ).persist()
+
         intervals = Intervals(
             _df=reduce(
                 lambda x, y: x.unionByName(y, allowMissingColumns=True),
@@ -108,9 +96,11 @@ class V2GStep:
             _schema=Intervals.get_schema(),
         )
         v2g_datasets = [
-            va_slimmed.get_distance_to_tss(gene_index_filtered, max_distance),
-            va_slimmed.get_most_severe_vep_v2g(vep_consequences, gene_index_filtered),
-            va_slimmed.get_plof_v2g(gene_index_filtered),
+            vi.get_distance_to_tss(gene_index_filtered, max_distance),
+            vi.get_most_severe_transcript_consequence(
+                vep_consequences, gene_index_filtered
+            ),
+            vi.get_plof_v2g(gene_index_filtered),
             intervals.v2g(vi),
         ]
         v2g = V2G(

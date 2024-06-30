@@ -1,8 +1,9 @@
 """Step to process GWAS Catalog associations and study table."""
+
 from __future__ import annotations
 
 from gentropy.common.session import Session
-from gentropy.dataset.variant_annotation import VariantAnnotation
+from gentropy.dataset.variant_index import VariantIndex
 from gentropy.datasource.gwas_catalog.associations import (
     GWASCatalogCuratedAssociationsParser,
 )
@@ -26,7 +27,7 @@ class GWASCatalogIngestionStep:
         catalog_ancestry_files: list[str],
         catalog_sumstats_lut: str,
         catalog_associations_file: str,
-        variant_annotation_path: str,
+        gnomad_variant_path: str,
         catalog_studies_out: str,
         catalog_associations_out: str,
         gwas_catalog_study_curation_file: str | None = None,
@@ -40,14 +41,14 @@ class GWASCatalogIngestionStep:
             catalog_ancestry_files (list[str]): List of raw ancestry annotations files from GWAS Catalog.
             catalog_sumstats_lut (str): GWAS Catalog summary statistics lookup table.
             catalog_associations_file (str): Raw GWAS catalog associations file.
-            variant_annotation_path (str): Input variant annotation path.
+            gnomad_variant_path (str): Path to GnomAD variants.
             catalog_studies_out (str): Output GWAS catalog studies path.
             catalog_associations_out (str): Output GWAS catalog associations path.
             gwas_catalog_study_curation_file (str | None): file of the curation table. Optional.
             inclusion_list_path (str | None): optional inclusion list (parquet)
         """
         # Extract
-        va = VariantAnnotation.from_parquet(session, variant_annotation_path)
+        gnomad_variants = VariantIndex.from_parquet(session, gnomad_variant_path)
         catalog_studies = session.spark.read.csv(
             list(catalog_study_files), sep="\t", header=True
         )
@@ -69,7 +70,9 @@ class GWASCatalogIngestionStep:
             StudyIndexGWASCatalogParser.from_source(
                 catalog_studies, ancestry_lut, sumstats_lut
             ).annotate_from_study_curation(gwas_catalog_study_curation),
-            GWASCatalogCuratedAssociationsParser.from_source(catalog_associations, va),
+            GWASCatalogCuratedAssociationsParser.from_source(
+                catalog_associations, gnomad_variants
+            ),
         )
 
         # if inclusion list is provided apply filter:

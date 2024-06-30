@@ -26,7 +26,7 @@ from gentropy.dataset.study_locus import StudyLocus, StudyLocusQualityCheck
 if TYPE_CHECKING:
     from pyspark.sql import Column, DataFrame
 
-    from gentropy.dataset.variant_annotation import VariantAnnotation
+    from gentropy.dataset.variant_index import VariantIndex
 
 
 @dataclass
@@ -197,14 +197,14 @@ class GWASCatalogCuratedAssociationsParser:
         return f.array_distinct(f.array(snp_id, snp_id_current, risk_allele))
 
     @staticmethod
-    def _map_to_variant_annotation_variants(
-        gwas_associations: DataFrame, variant_annotation: VariantAnnotation
+    def _map_variants_to_variant_index(
+        gwas_associations: DataFrame, variant_index: VariantIndex
     ) -> DataFrame:
         """Add variant metadata in associations.
 
         Args:
-            gwas_associations (DataFrame): raw GWAS Catalog associations
-            variant_annotation (VariantAnnotation): variant annotation dataset
+            gwas_associations (DataFrame): raw GWAS Catalog associations.
+            variant_index (VariantIndex): GnomaAD variants dataset with allele frequencies.
 
         Returns:
             DataFrame: GWAS Catalog associations data including `variantId`, `referenceAllele`,
@@ -228,7 +228,7 @@ class GWASCatalogCuratedAssociationsParser:
         )
 
         # Subset of variant annotation required for GWAS Catalog annotations:
-        va_subset = variant_annotation.df.select(
+        va_subset = variant_index.df.select(
             "variantId",
             "chromosome",
             # Calculate the position in Ensembl coordinates for indels:
@@ -241,7 +241,7 @@ class GWASCatalogCuratedAssociationsParser:
             "referenceAllele",
             "alternateAllele",
             "alleleFrequencies",
-            variant_annotation.max_maf().alias("maxMaf"),
+            variant_index.max_maf().alias("maxMaf"),
         ).join(
             f.broadcast(
                 gwas_associations_subset.select(
@@ -1035,7 +1035,7 @@ class GWASCatalogCuratedAssociationsParser:
     def from_source(
         cls: type[GWASCatalogCuratedAssociationsParser],
         gwas_associations: DataFrame,
-        variant_annotation: VariantAnnotation,
+        variant_index: VariantIndex,
         pvalue_threshold: float = WindowBasedClumpingStepConfig.gwas_significance,
     ) -> StudyLocusGWASCatalog:
         """Read GWASCatalog associations.
@@ -1044,9 +1044,9 @@ class GWASCatalogCuratedAssociationsParser:
         applies some pre-defined filters on the data:
 
         Args:
-            gwas_associations (DataFrame): GWAS Catalog raw associations dataset
-            variant_annotation (VariantAnnotation): Variant annotation dataset
-            pvalue_threshold (float): P-value threshold for flagging associations
+            gwas_associations (DataFrame): GWAS Catalog raw associations dataset.
+            variant_index (VariantIndex): Variant index dataset with available allele frequencies.
+            pvalue_threshold (float): P-value threshold for flagging associations.
 
         Returns:
             StudyLocusGWASCatalog: GWASCatalogAssociations dataset
@@ -1060,8 +1060,8 @@ class GWASCatalogCuratedAssociationsParser:
             .transform(
                 # Map/harmonise variants to variant annotation dataset:
                 # This function adds columns: variantId, referenceAllele, alternateAllele, chromosome, position
-                lambda df: GWASCatalogCuratedAssociationsParser._map_to_variant_annotation_variants(
-                    df, variant_annotation
+                lambda df: GWASCatalogCuratedAssociationsParser._map_variants_to_variant_index(
+                    df, variant_index
                 )
             )
             .withColumn(

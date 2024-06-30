@@ -37,13 +37,13 @@ gnomad_public_bucket: gs://gcp-public-data--gnomad/release/
 ld_matrix_template: ${datasets.gnomad_public_bucket}/2.1.1/ld/gnomad.genomes.r2.1.1.{POP}.common.adj.ld.bm
 ld_index_raw_template: ${datasets.gnomad_public_bucket}/2.1.1/ld/gnomad.genomes.r2.1.1.{POP}.common.ld.variant_indices.ht
 liftover_ht_path: ${datasets.gnomad_public_bucket}/2.1.1/liftover_grch38/ht/genomes/gnomad.genomes.r2.1.1.sites.liftover_grch38.ht
-# variant_annotation
+# GnomAD variant set:
 gnomad_genomes_path: ${datasets.gnomad_public_bucket}4.0/ht/genomes/gnomad.genomes.v4.0.sites.ht/
 
 # Others
 chain_38_37: gs://hail-common/references/grch38_to_grch37.over.chain.gz
 chain_37_38: ${datasets.static_assets}/grch37_to_grch38.over.chain
-vep_consequences: ${datasets.static_assets}/vep_consequences.tsv
+vep_consequences: ${datasets.static_assets}/variant_consequence_to_score.tsv
 anderson: ${datasets.static_assets}/andersson2014/enhancer_tss_associations.bed
 javierre: ${datasets.static_assets}/javierre_2016_preprocessed
 jung: ${datasets.static_assets}/jung2019_pchic_tableS3.csv
@@ -55,7 +55,7 @@ finngen_finemapping_results_path: ${datasets.inputs}/Finngen_susie_finemapping_r
 finngen_finemapping_summaries_path: ${datasets.inputs}/Finngen_susie_finemapping_r10/Finngen_susie_credset_summary_r10.tsv
 
 # Dev output datasets
-variant_annotation: ${datasets.outputs}/variant_annotation
+gnomad_variants: ${datasets.outputs}/gnomad_variants
 study_locus: ${datasets.outputs}/study_locus
 summary_statistics: ${datasets.outputs}/summary_statistics
 study_locus_overlap: ${datasets.outputs}/study_locus_overlap
@@ -68,6 +68,8 @@ catalog_study_locus: ${datasets.study_locus}/catalog_study_locus
 from_sumstats_study_locus: ${datasets.study_locus}/from_sumstats
 from_sumstats_pics: ${datasets.credible_set}/from_sumstats
 
+vep_output_path: gs://genetics_etl_python_playground/vep/full_variant_index_vcf
+
 # ETL output datasets:
 l2g_gold_standard_curation: ${datasets.release_folder}/locus_to_gene_gold_standard.json
 l2g_model: ${datasets.release_folder}/locus_to_gene_model/classifier.skops
@@ -78,4 +80,4 @@ study_index: ${datasets.release_folder}/study_index
 variant_index: ${datasets.release_folder}/variant_index
 credible_set: ${datasets.release_folder}/credible_set
 gene_index: ${datasets.release_folder}/gene_index
-v2g: ${datasets.release_folder}/variant_to_gene
+variant_to_gene: ${datasets.release_folder}/variant_to_gene

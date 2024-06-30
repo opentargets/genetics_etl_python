@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 import hail as hl
 
 from gentropy.common.types import VariantPopulation
-from gentropy.config import VariantAnnotationConfig
-from gentropy.dataset.variant_annotation import VariantAnnotation
+from gentropy.config import GnomadVariantConfig
+from gentropy.dataset.variant_index import VariantIndex
 
 if TYPE_CHECKING:
     pass
@@ -19,26 +19,23 @@ class GnomADVariants:
 
     def __init__(
         self,
-        gnomad_genomes_path: str = VariantAnnotationConfig().gnomad_genomes_path,
-        chain_38_37: str = VariantAnnotationConfig().chain_38_37,
+        gnomad_genomes_path: str = GnomadVariantConfig().gnomad_genomes_path,
         gnomad_variant_populations: list[
             VariantPopulation | str
-        ] = VariantAnnotationConfig().gnomad_variant_populations,
+        ] = GnomadVariantConfig().gnomad_variant_populations,
     ):
         """Initialize.
 
         Args:
             gnomad_genomes_path (str): Path to gnomAD genomes hail table.
-            chain_38_37 (str): Path to GRCh38 to GRCh37 chain file.
             gnomad_variant_populations (list[VariantPopulation | str]): List of populations to include.
 
-        All defaults are stored in VariantAnnotationConfig.
+        All defaults are stored in GnomadVariantConfig.
         """
         self.gnomad_genomes_path = gnomad_genomes_path
-        self.chain_38_37 = chain_38_37
         self.gnomad_variant_populations = gnomad_variant_populations
 
-    def as_variant_annotation(self: GnomADVariants) -> VariantAnnotation:
+    def as_variant_index(self: GnomADVariants) -> VariantIndex:
         """Generate variant annotation dataset from gnomAD.
 
         Some relevant modifications to the original dataset are:
@@ -48,7 +45,7 @@ class GnomADVariants:
         3. Field names are converted to camel case to follow the convention.
 
         Returns:
-            VariantAnnotation: Variant annotation dataset
+            VariantIndex: GnomaAD variants dataset.
         """
         # Load variants dataset
         ht = hl.read_table(
@@ -56,19 +53,14 @@ class GnomADVariants:
             _load_refs=False,
         )
 
-        # Liftover
-        grch37 = hl.get_reference("GRCh37")
-        grch38 = hl.get_reference("GRCh38")
-        grch38.add_liftover(self.chain_38_37, grch37)
-
         # Drop non biallelic variants
         ht = ht.filter(ht.alleles.length() == 2)
-        # Liftover
-        ht = ht.annotate(locus_GRCh37=hl.liftover(ht.locus, "GRCh37"))
+
         # Select relevant fields and nested records to create class
-        return VariantAnnotation(
+        return VariantIndex(
             _df=(
                 ht.select(
+                    # Extract mandatory fields:
                     variantId=hl.str("_").join(
                         [
                             ht.locus.contig.replace("chr", ""),
@@ -79,12 +71,9 @@ class GnomADVariants:
                     ),
                     chromosome=ht.locus.contig.replace("chr", ""),
                     position=ht.locus.position,
-                    chromosomeB37=ht.locus_GRCh37.contig.replace("chr", ""),
-                    positionB37=ht.locus_GRCh37.position,
                     referenceAllele=ht.alleles[0],
                     alternateAllele=ht.alleles[1],
-                    rsIds=ht.rsid,
-                    alleleType=ht.allele_info.allele_type,
+                    # Extract allele frequencies from populations of interest:
                     alleleFrequencies=hl.set(
                         [f"{pop}_adj" for pop in self.gnomad_variant_populations]
                     ).map(
@@ -93,33 +82,46 @@ class GnomADVariants:
                             alleleFrequency=ht.freq[ht.globals.freq_index_dict[p]].AF,
                         )
                     ),
-                    vep=hl.struct(
-                        mostSevereConsequence=ht.vep.most_severe_consequence,
-                        transcriptConsequences=hl.map(
-                            lambda x: hl.struct(
-                                aminoAcids=x.amino_acids,
-                                consequenceTerms=x.consequence_terms,
-                                geneId=x.gene_id,
-                                lof=x.lof,
+                    # Extract most severe consequence:
+                    mostSevereConsequence=ht.vep.most_severe_consequence,
+                    # Extract in silico predictors:
+                    inSilicoPredictors=hl.array(
+                        [
+                            hl.struct(
+                                method=hl.str("spliceai"),
+                                assessment=hl.missing(hl.tstr),
+                                score=hl.expr.functions.float32(
+                                    ht.in_silico_predictors.spliceai_ds_max
+                                ),
+                                assessmentFlag=hl.missing(hl.tstr),
+                                targetId=hl.missing(hl.tstr),
                             ),
-                            # Only keeping canonical transcripts
-                            ht.vep.transcript_consequences.filter(
-                                lambda x: (x.canonical == 1)
-                                & (x.gene_symbol_source == "HGNC")
+                            hl.struct(
+                                method=hl.str("pangolin"),
+                                assessment=hl.missing(hl.tstr),
+                                score=hl.expr.functions.float32(
+                                    ht.in_silico_predictors.pangolin_largest_ds
+                                ),
+                                assessmentFlag=hl.missing(hl.tstr),
+                                targetId=hl.missing(hl.tstr),
                             ),
-                        ),
+                        ]
                     ),
-                    inSilicoPredictors=hl.struct(
-                        cadd=hl.struct(
-                            phred=ht.in_silico_predictors.cadd.phred,
-                            raw=ht.in_silico_predictors.cadd.raw_score,
-                        ),
-                        revelMax=ht.in_silico_predictors.revel_max,
-                        spliceaiDsMax=ht.in_silico_predictors.spliceai_ds_max,
-                        pangolinLargestDs=ht.in_silico_predictors.pangolin_largest_ds,
-                        phylop=ht.in_silico_predictors.phylop,
-                        siftMax=ht.in_silico_predictors.sift_max,
-                        polyphenMax=ht.in_silico_predictors.polyphen_max,
+                    # Extract cross references to GnomAD:
+                    dbXrefs=hl.array(
+                        [
+                            hl.struct(
+                                id=hl.str("-").join(
+                                    [
+                                        ht.locus.contig.replace("chr", ""),
+                                        hl.str(ht.locus.position),
+                                        ht.alleles[0],
+                                        ht.alleles[1],
+                                    ]
+                                ),
+                                source=hl.str("gnomad"),
+                            )
+                        ]
                     ),
                 )
                 .key_by("chromosome", "position")
@@ -127,5 +129,5 @@ class GnomADVariants:
                 .select_globals()
                 .to_spark(flatten=False)
             ),
-            _schema=VariantAnnotation.get_schema(),
+            _schema=VariantIndex.get_schema(),
         )

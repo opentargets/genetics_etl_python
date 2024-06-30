@@ -1,53 +1,188 @@
 {
-  "type": "struct",
   "fields": [
     {
+      "metadata": {},
       "name": "variantId",
-      "type": "string",
       "nullable": false,
-      "metadata": {}
+      "type": "string"
     },
     {
+      "metadata": {},
       "name": "chromosome",
-      "type": "string",
       "nullable": false,
-      "metadata": {}
+      "type": "string"
     },
     {
+      "metadata": {},
       "name": "position",
-      "type": "integer",
       "nullable": false,
-      "metadata": {}
+      "type": "integer"
     },
     {
+      "metadata": {},
       "name": "referenceAllele",
-      "type": "string",
       "nullable": false,
-      "metadata": {}
+      "type": "string"
     },
     {
+      "metadata": {},
       "name": "alternateAllele",
-      "type": "string",
       "nullable": false,
-      "metadata": {}
+      "type": "string"
     },
     {
-      "name": "chromosomeB37",
-      "type": "string",
-      "nullable": true,
-      "metadata": {}
-    },
-    {
-      "name": "positionB37",
-      "type": "integer",
-      "nullable": true,
-      "metadata": {}
-    },
-    {
-      "name": "alleleType",
-      "type": "string",
+      "metadata": {},
+      "name": "inSilicoPredictors",
       "nullable": false,
-      "metadata": {}
+      "type": {
+        "containsNull": true,
+        "elementType": {
+          "fields": [
+            {
+              "metadata": {},
+              "name": "method",
+              "nullable": true,
+              "type": "string"
+            },
+            {
+              "metadata": {},
+              "name": "assessment",
+              "nullable": true,
+              "type": "string"
+            },
+            {
+              "metadata": {},
+              "name": "score",
+              "nullable": true,
+              "type": "float"
+            },
+            {
+              "metadata": {},
+              "name": "assessmentFlag",
+              "nullable": true,
+              "type": "string"
+            },
+            {
+              "metadata": {},
+              "name": "targetId",
+              "nullable": true,
+              "type": "string"
+            }
+          ],
+          "type": "struct"
+        },
+        "type": "array"
+      }
+    },
+    {
+      "metadata": {},
+      "name": "mostSevereConsequenceId",
+      "nullable": false,
+      "type": "string"
+    },
+    {
+      "metadata": {},
+      "name": "transcriptConsequences",
+      "nullable": true,
+      "type": {
+        "containsNull": false,
+        "elementType": {
+          "fields": [
+            {
+              "metadata": {},
+              "name": "variantFunctionalConsequenceIds",
+              "nullable": true,
+              "type": {
+                "containsNull": true,
+                "elementType": "string",
+                "type": "array"
+              }
+            },
+            {
+              "metadata": {},
+              "name": "aminoAcidChange",
+              "nullable": true,
+              "type": "string"
+            },
+            {
+              "metadata": {},
+              "name": "uniprotAccessions",
+              "nullable": true,
+              "type": {
+                "containsNull": true,
+                "elementType": "string",
+                "type": "array"
+              }
+            },
+            {
+              "metadata": {},
+              "name": "isEnsemblCanonical",
+              "nullable": false,
+              "type": "boolean"
+            },
+            {
+              "metadata": {},
+              "name": "codons",
+              "nullable": true,
+              "type": "string"
+            },
+            {
+              "metadata": {},
+              "name": "distance",
+              "nullable": true,
+              "type": "long"
+            },
+            {
+              "metadata": {},
+              "name": "targetId",
+              "nullable": true,
+              "type": "string"
+            },
+            {
+              "metadata": {},
+              "name": "impact",
+              "nullable": true,
+              "type": "string"
+            },
+            {
+              "metadata": {},
+              "name": "lofteePrediction",
+              "nullable": true,
+              "type": "string"
+            },
+            {
+              "metadata": {},
+              "name": "siftPrediction",
+              "nullable": true,
+              "type": "float"
+            },
+            {
+              "metadata": {},
+              "name": "polyphenPrediction",
+              "nullable": true,
+              "type": "float"
+            },
+            {
+              "metadata": {},
+              "name": "transcriptId",
+              "nullable": true,
+              "type": "string"
+            }
+          ],
+          "type": "struct"
+        },
+        "type": "array"
+      }
+    },
+    {
+      "metadata": {},
+      "name": "rsIds",
+      "nullable": true,
+      "type": {
+        "containsNull": true,
+        "elementType": "string",
+        "type": "array"
+      }
     },
     {
       "name": "alleleFrequencies",
@@ -76,88 +211,31 @@
       "metadata": {}
     },
     {
-      "name": "inSilicoPredictors",
-      "nullable": false,
       "metadata": {},
+      "name": "dbXrefs",
+      "nullable": false,
       "type": {
-        "type": "struct",
-        "fields": [
-          {
-            "name": "cadd",
-            "nullable": true,
-            "metadata": {},
-            "type": {
-              "type": "struct",
-              "fields": [
-                {
-                  "name": "raw",
-                  "type": "float",
-                  "nullable": true,
-                  "metadata": {}
-                },
-                {
-                  "name": "phred",
-                  "type": "float",
-                  "nullable": true,
-                  "metadata": {}
-                }
-              ]
+        "containsNull": true,
+        "elementType": {
+          "fields": [
+            {
+              "metadata": {},
+              "name": "id",
+              "nullable": true,
+              "type": "string"
+            },
+            {
+              "metadata": {},
+              "name": "source",
+              "nullable": true,
+              "type": "string"
             }
-          },
-          {
-            "name": "revelMax",
-            "type": "double",
-            "nullable": true,
-            "metadata": {}
-          },
-          {
-            "name": "spliceaiDsMax",
-            "type": "float",
-            "nullable": true,
-            "metadata": {}
-          },
-          {
-            "name": "pangolinLargestDs",
-            "type": "double",
-            "nullable": true,
-            "metadata": {}
-          },
-          {
-            "name": "phylop",
-            "type": "double",
-            "nullable": true,
-            "metadata": {}
-          },
-          {
-            "name": "siftMax",
-            "type": "double",
-            "nullable": true,
-            "metadata": {}
-          },
-          {
-            "name": "polyphenMax",
-            "type": "double",
-            "nullable": true,
-            "metadata": {}
-          }
-        ]
+          ],
+          "type": "struct"
+        },
+        "type": "array"
       }
-    },
-    {
-      "name": "mostSevereConsequence",
-      "type": "string",
-      "nullable": true,
-      "metadata": {}
-    },
-    {
-      "name": "rsIds",
-      "type": {
-        "type": "array",
-        "elementType": "string",
-        "containsNull": true
-      },
-      "nullable": true,
-      "metadata": {}
     }
-  ]
+  ],
+  "type": "struct"
 }

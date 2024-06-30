@@ -25,5 +25,8 @@
   "python.testing.pytestEnabled": true,
   "mypy-type-checker.severity": {
     "error": "Information"
-  }
+  },
+  "yaml.extension.recommendations": false,
+  "workbench.remoteIndicator.showExtensionRecommendations": false,
+  "extensions.ignoreRecommendations": true
 }

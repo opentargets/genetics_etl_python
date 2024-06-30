@@ -23,7 +23,8 @@ This section contains information about the data source harmonisation tools avai
 ## Variant annotation/validation
 
 1. [GnomAD](gnomad/_gnomad.md) v4.0
-1. GWAS catalog harmonisation pipeline [more info](https://www.ebi.ac.uk/gwas/docs/methods/summary-statistics#_harmonised_summary_statistics_data)
+2. GWAS catalog's [harmonisation pipeline](https://www.ebi.ac.uk/gwas/docs/methods/summary-statistics#_harmonised_summary_statistics_data)
+3. Ensembl's [Variant Effect Predictor](https://www.ensembl.org/info/docs/tools/vep/index.html)
 
 ## Linkage desiquilibrium
 

@@ -23,7 +23,6 @@ from gentropy.dataset.study_locus import StudyLocus
 from gentropy.dataset.study_locus_overlap import StudyLocusOverlap
 from gentropy.dataset.summary_statistics import SummaryStatistics
 from gentropy.dataset.v2g import V2G
-from gentropy.dataset.variant_annotation import VariantAnnotation
 from gentropy.dataset.variant_index import VariantIndex
 from gentropy.datasource.eqtl_catalogue.finemapping import EqtlCatalogueFinemapping
 from gentropy.datasource.eqtl_catalogue.study_index import EqtlCatalogueStudyIndex
@@ -277,45 +276,6 @@ def mock_v2g(spark: SparkSession) -> V2G:
 
 
 @pytest.fixture()
-def mock_variant_annotation(spark: SparkSession) -> VariantAnnotation:
-    """Mock variant annotation."""
-    va_schema = VariantAnnotation.get_schema()
-
-    data_spec = (
-        dg.DataGenerator(
-            spark,
-            rows=400,
-            partitions=4,
-            randomSeedMethod="hash_fieldname",
-        )
-        .withSchema(va_schema)
-        .withColumnSpec("alleleType", percentNulls=0.1)
-        .withColumnSpec("chromosomeB37", percentNulls=0.1)
-        .withColumnSpec("positionB37", percentNulls=0.1)
-        # Nested column handling workaround
-        # https://github.com/databrickslabs/dbldatagen/issues/135
-        # It's a workaround for nested column handling in dbldatagen.
-        .withColumnSpec(
-            "alleleFrequencies",
-            expr='array(named_struct("alleleFrequency", rand(), "populationName", cast(rand() as string)))',
-            percentNulls=0.1,
-        )
-        .withColumnSpec("rsIds", expr="array(cast(rand() AS string))", percentNulls=0.1)
-        .withColumnSpec(
-            "vep",
-            expr='named_struct("mostSevereConsequence", cast(rand() as string), "transcriptConsequences", array(named_struct("aminoAcids", cast(rand() as string), "consequenceTerms", array(cast(rand() as string)), "geneId", cast(rand() as string), "lof", cast(rand() as string))))',
-            percentNulls=0.1,
-        )
-        .withColumnSpec(
-            "inSilicoPredictors",
-            expr='named_struct("cadd", named_struct("phred", cast(rand() as float), "raw_score", cast(rand() as float)), "revelMax", cast(rand() as double), "spliceaiDsMax", cast(rand() as float), "pangolinLargestDs", cast(rand() as double), "phylop", cast(rand() as double), "polyphenMax", cast(rand() as double), "siftMax", cast(rand() as double))',
-            percentNulls=0.1,
-        )
-    )
-    return VariantAnnotation(_df=data_spec.build(), _schema=va_schema)
-
-
-@pytest.fixture()
 def mock_variant_index(spark: SparkSession) -> VariantIndex:
     """Mock variant index."""
     vi_schema = VariantIndex.get_schema()
@@ -328,23 +288,65 @@ def mock_variant_index(spark: SparkSession) -> VariantIndex:
             randomSeedMethod="hash_fieldname",
         )
         .withSchema(vi_schema)
-        .withColumnSpec("chromosomeB37", percentNulls=0.1)
-        .withColumnSpec("positionB37", percentNulls=0.1)
-        .withColumnSpec("mostSevereConsequence", percentNulls=0.1)
+        .withColumnSpec("mostSevereConsequenceId", percentNulls=0.1)
         # Nested column handling workaround
         # https://github.com/databrickslabs/dbldatagen/issues/135
         # It's a workaround for nested column handling in dbldatagen.
+        .withColumnSpec(
+            "inSilicoPredictors",
+            expr="""
+                array(
+                    named_struct(
+                        "method", cast(rand() as string),
+                        "assessment", cast(rand() as string),
+                        "score", rand(),
+                        "assessmentFlag", cast(rand() as string),
+                        "targetId", cast(rand() as string)
+                    )
+                )
+            """,
+            percentNulls=0.1,
+        )
         .withColumnSpec(
             "alleleFrequencies",
             expr='array(named_struct("alleleFrequency", rand(), "populationName", cast(rand() as string)))',
             percentNulls=0.1,
         )
+        .withColumnSpec("rsIds", expr="array(cast(rand() AS string))", percentNulls=0.1)
         .withColumnSpec(
-            "inSilicoPredictors",
-            expr='named_struct("cadd", named_struct("phred", cast(rand() as float), "raw_score", cast(rand() as float)), "revelMax", cast(rand() as double), "spliceaiDsMax", cast(rand() as float), "pangolinLargestDs", cast(rand() as double), "phylop", cast(rand() as double), "polyphenMax", cast(rand() as double), "siftMax", cast(rand() as double))',
+            "transcriptConsequences",
+            expr="""
+                array(
+                    named_struct(
+                        "variantFunctionalConsequenceIds", array(cast(rand() as string)),
+                        "aminoAcidChange", cast(rand() as string),
+                        "uniprotAccessions", array(cast(rand() as string)),
+                        "isEnsemblCanonical", cast(rand() as boolean),
+                        "codons", cast(rand() as string),
+                        "distance", cast(rand() as long),
+                        "targetId", cast(rand() as string),
+                        "impact", cast(rand() as string),
+                        "lofteePrediction", cast(rand() as string),
+                        "siftPrediction", rand(),
+                        "polyphenPrediction", rand(),
+                        "transcriptId", cast(rand() as string)
+                    )
+                )
+            """,
             percentNulls=0.1,
         )
-        .withColumnSpec("rsIds", expr="array(cast(rand() AS string))", percentNulls=0.1)
+        .withColumnSpec(
+            "dbXrefs",
+            expr="""
+                array(
+                    named_struct(
+                        "id", cast(rand() as string),
+                        "source", cast(rand() as string)
+                    )
+                )
+            """,
+            percentNulls=0.1,
+        )
     )
 
     return VariantIndex(_df=data_spec.build(), _schema=vi_schema)

@@ -1,5 +1,5 @@
 ---
-title: ld_index
+title: GnomAD Linkage data ingestion
 ---
 
-::: gentropy.ld_index.LDIndexStep
+::: gentropy.gnomad_ingestion.LDIndexStep

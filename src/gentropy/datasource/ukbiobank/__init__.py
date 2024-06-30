@@ -1,3 +1,3 @@
-"""GWAS Catalog Data Source."""
+"""UK biobank."""
 
 from __future__ import annotations

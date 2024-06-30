@@ -2,4 +2,4 @@
 title: variant_to_gene
 ---
 
-::: gentropy.v2g.V2GStep
+::: gentropy.variant_to_gene.V2GStep
