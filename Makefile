@@ -44,7 +44,11 @@ create-dev-cluster: build ## Spin up a simple dataproc cluster with all dependen
 		--master-machine-type n1-standard-16 \
 		--initialization-actions=gs://genetics_etl_python_playground/initialisation/${VERSION_NO}/install_dependencies_on_cluster.sh \
 		--metadata="PACKAGE=gs://genetics_etl_python_playground/initialisation/${VERSION_NO}/gentropy-${VERSION_NO}-py3-none-any.whl,CONFIGTAR=gs://genetics_etl_python_playground/initialisation/${VERSION_NO}/config.tar.gz" \
-		--single-node \
+		--num-workers 4 \
+		--primary-worker-type n1-standard-8 \
+		--worker-machine-type n1-standard-4 \
+		--worker-boot-disk-size 500 \
+		--autoscaling_policy=f"projects/${PROJECT_ID}/regions/${REGION}/autoscalingPolicies/eqtl-preprocess", \
 		--optional-components=JUPYTER \
 		--enable-component-gateway
 

@@ -8,7 +8,7 @@ env:
   PROJECT_ID: open-targets-genetics-dev
   REGION: europe-west1
   GAR_LOCATION: europe-west1-docker.pkg.dev/open-targets-genetics-dev
-  IMAGE_NAME: gentropy-app
+  REPOSITORY: gentropy-app
 
 jobs:
   build-push-artifact:
@@ -33,7 +33,13 @@ jobs:
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
       - name: Build image
-        run: docker build . --tag "${{ env.GAR_LOCATION }}/${{ env.IMAGE_NAME }}/gentropy:${{ github.ref_name }}"
+        run: docker build . --tag "${{ env.GAR_LOCATION }}/${{ env.REPOSITORY }}/gentropy:${{ github.ref_name }}"
 
       - name: Push image
-        run: docker push "${{ env.GAR_LOCATION }}/${{ env.IMAGE_NAME }}/gentropy:${{ github.ref_name }}"
+        run: docker push "${{ env.GAR_LOCATION }}/${{ env.REPOSITORY }}/gentropy:${{ github.ref_name }}"
+
+      - name: Build VEP image
+        run: docker build src/vep --tag "${{ env.GAR_LOCATION }}/${{ env.REPOSITORY }}/custom_ensembl_vep:${{ github.ref_name }}"
+
+      - name: Push VEP image
+        run: docker push "${{ env.GAR_LOCATION }}/${{ env.REPOSITORY }}/custom_ensembl_vep:${{ github.ref_name }}"
