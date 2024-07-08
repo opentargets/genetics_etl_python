@@ -24,4 +24,4 @@ The algorithmic logic is similar to classic clumping approaches from PLINK (Refe
 
 # Locus-breaker clumping
 
-::: gentropy.method.locus_breaker_clumping.locus_breaker
+::: gentropy.method.locus_breaker_clumping.LocusBreakerClumping

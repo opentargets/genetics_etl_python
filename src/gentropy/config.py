@@ -382,7 +382,7 @@ class LocusBreakerClumpingConfig(StepConfig):
         }
     )
     distance_cutoff: int = 250_000
-    flankig_distance: int = 100_000
+    flanking_distance: int = 100_000
     baseline_pvalue_cutoff: float = 1e-5
 
 

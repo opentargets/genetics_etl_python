@@ -86,7 +86,7 @@ class SummaryStatistics(Dataset):
         baseline_pvalue_cutoff: float = LocusBreakerClumpingConfig().baseline_pvalue_cutoff,
         distance_cutoff: int = LocusBreakerClumpingConfig().distance_cutoff,
         pvalue_cutoff: float = WindowBasedClumpingStepConfig().gwas_significance,
-        flankig_distance: int = LocusBreakerClumpingConfig().flankig_distance,
+        flanking_distance: int = LocusBreakerClumpingConfig().flanking_distance,
     ) -> StudyLocus:
         """Generate study-locus from summary statistics using locus-breaker clumping method with locus boundaries.
 
@@ -96,20 +96,20 @@ class SummaryStatistics(Dataset):
             baseline_pvalue_cutoff (float, optional): Baseline significance we consider for the locus.
             distance_cutoff (int, optional): Distance in base pairs to be used for clumping.
             pvalue_cutoff (float, optional): GWAS significance threshold.
-            flankig_distance (int, optional): Flank distance in base pairs to be used for clumping.
+            flanking_distance (int, optional): Flank distance in base pairs to be used for clumping.
 
         Returns:
             StudyLocus: Clumped study-locus optionally containing variants based on window.
             Check LocusBreakerClumpingConfig object for default values.
         """
-        from gentropy.method.locus_breaker_clumping import locus_breaker
+        from gentropy.method.locus_breaker_clumping import LocusBreakerClumping
 
-        return locus_breaker(
+        return LocusBreakerClumping.locus_breaker(
             self,
             baseline_pvalue_cutoff,
             distance_cutoff,
             pvalue_cutoff,
-            flankig_distance,
+            flanking_distance,
         )
 
     def exclude_region(self: SummaryStatistics, region: str) -> SummaryStatistics:
