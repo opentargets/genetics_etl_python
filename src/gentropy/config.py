@@ -436,6 +436,16 @@ class FinemapperConfig(StepConfig):
 
 
 @dataclass
+class GWASQCStep(StepConfig):
+    """GWAS QC step configuration."""
+
+    gwas_path: str = MISSING
+    output_path: str = MISSING
+    studyid: str = MISSING
+    _target_: str = "gentropy.sumstat_qc_step.SummaryStatisticsQCStep"
+
+
+@dataclass
 class Config:
     """Application configuration."""
 
