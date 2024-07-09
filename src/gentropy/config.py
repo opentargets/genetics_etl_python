@@ -170,13 +170,9 @@ class LDIndexConfig(StepConfig):
         default_factory=lambda: [
             "afr",  # African-American
             "amr",  # American Admixed/Latino
-            "asj",  # Ashkenazi Jewish
             "eas",  # East Asian
-            "est",  # Estionian
             "fin",  # Finnish
             "nfe",  # Non-Finnish European
-            "nwe",  # Northwestern European
-            "seu",  # Southeastern European
         ]
     )
     use_version_from_input: bool = False
