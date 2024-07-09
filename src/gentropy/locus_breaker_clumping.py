@@ -47,27 +47,29 @@ class LocusBreakerClumpingStep:
         """
         sum_stats = SummaryStatistics.from_parquet(
             session, summary_statistics_input_path, recursiveFileLookup=True
-        ).persist()
+        )
         lbc = sum_stats.locus_breaker_clumping(
             lbc_baseline_pvalue,
             lbc_distance_cutoff,
             lbc_pvalue_threshold,
             lbc_flanking_distance,
         )
+        wbc = sum_stats.window_based_clumping(wbc_clump_distance, wbc_pvalue_threshold)
+
         clumped_result = LocusBreakerClumping.process_locus_breaker_output(
             lbc,
-            sum_stats,
+            wbc,
             large_loci_size,
-            wbc_clump_distance,
-            wbc_pvalue_threshold,
         )
         if remove_mhc:
-            clumped_result = clumped_result.exclude_region("chr6:25726063-33400556")
+            clumped_result = clumped_result.exclude_region(
+                "chr6:25726063-33400556", exclude_overlap=True
+            )
 
         if collect_locus:
             clumped_result = clumped_result.annotate_locus_statistics_boundaries(
                 sum_stats
             )
-        clumped_result.df.write.mode(session.write_mode).parquet(
-            clumped_study_locus_output_path
-        )
+        clumped_result.df.write.partitionBy("studyLocusId").mode(
+            session.write_mode
+        ).parquet(clumped_study_locus_output_path)

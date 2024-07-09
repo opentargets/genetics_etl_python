@@ -121,54 +121,48 @@ class LocusBreakerClumping:
 
     @staticmethod
     def process_locus_breaker_output(
-        study_locus: StudyLocus,
-        sum_stats: SummaryStatistics,
+        lbc: StudyLocus,
+        wbc: StudyLocus,
         large_loci_size: int,
-        wbc_clump_distance: int,
-        gwas_threshold: float,
     ) -> StudyLocus:
         """Process the locus breaker method result, and run window-based clumping on large loci.
 
         Args:
-            study_locus (StudyLocus): StudyLocus object with locus start and end positions.
-            sum_stats (SummaryStatistics): Input summary statistics dataset.
+            lbc (StudyLocus): StudyLocus object from locus-breaker clumping.
+            wbc (StudyLocus): StudyLocus object from window-based clumping.
             large_loci_size (int): the size to define large loci which should be broken with wbc.
-            wbc_clump_distance (int): Clump distance for window-based clumping.
-            gwas_threshold (float): P-value threshold to be used in window-based clumping.
 
         Returns:
             StudyLocus: clumped study loci with large loci broken by window-based clumping.
         """
-        small_loci = study_locus.filter(
+        small_loci = lbc.filter(
             (f.col("locusEnd") - f.col("locusStart")) <= large_loci_size
         )
-        large_loci = study_locus.filter(
+        large_loci = lbc.filter(
             (f.col("locusEnd") - f.col("locusStart")) > large_loci_size
         )
-        large_loci_wbc = (
-            SummaryStatistics(
-                sum_stats.df.alias("ss")
-                .join(
-                    large_loci.df.alias("ll"),
-                    (f.col("ss.studyId") == f.col("ll.studyId"))
-                    & (f.col("ss.chromosome") == f.col("ll.chromosome"))
-                    & (f.col("ss.position") >= f.col("ll.locusStart"))
-                    & (f.col("ss.position") <= f.col("ll.locusEnd")),
-                    "inner",
-                )
-                .select([f.col("ss." + col) for col in sum_stats.df.columns]),
-                SummaryStatistics.get_schema(),
+        large_loci_wbc = StudyLocus(
+            wbc.df.alias("wbc")
+            .join(
+                large_loci.df.alias("ll"),
+                (f.col("wbc.studyId") == f.col("ll.studyId"))
+                & (f.col("wbc.chromosome") == f.col("ll.chromosome"))
+                & (
+                    f.col("wbc.position").between(
+                        f.col("ll.locusStart"), f.col("ll.locusEnd")
+                    )
+                ),
+                "semi",
             )
-            .window_based_clumping(wbc_clump_distance, gwas_threshold)
-            .df.withColumns(
+            .withColumns(
                 {
                     "locusStart": f.col("position") - large_loci_size // 2,
                     "locusEnd": f.col("position") + large_loci_size // 2,
                 }
-            )
+            ),
+            StudyLocus.get_schema(),
         )
-
         return StudyLocus(
-            large_loci_wbc.unionByName(small_loci.df),
+            large_loci_wbc.df.unionByName(small_loci.df),
             StudyLocus.get_schema(),
         )

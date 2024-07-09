@@ -44,7 +44,6 @@ class SusieFineMapperStep:
         self,
         session: Session,
         study_locus_to_finemap: str,
-        study_locus_collected_path: str,
         study_index_path: str,
         output_path: str,
         max_causal_snps: int = 10,
@@ -60,14 +59,12 @@ class SusieFineMapperStep:
         carma_time_limit: int = 600,
         imputed_r2_threshold: float = 0.9,
         ld_score_threshold: float = 5,
-        output_path_log: str = "~/",
     ) -> None:
         """Run fine-mapping on a studyLocusId from a collected studyLocus table.
 
         Args:
             session (Session): Spark session
             study_locus_to_finemap (str): path to the study locus to fine-map
-            study_locus_collected_path (str): path to the collected study locus
             study_index_path (str): path to the study index
             output_path (str): path to the output
             max_causal_snps (int): Maximum number of causal variants in locus, default is 10
@@ -83,14 +80,15 @@ class SusieFineMapperStep:
             carma_time_limit (int): CARMA time limit, default is 600 seconds
             imputed_r2_threshold (float): imputed R2 threshold, default is 0.9
             ld_score_threshold (float): LD score threshold ofr imputation, default is 5
-            output_path_log (str): path to the output log
         """
         # Initialise Hail
         hl.init(sc=session.spark.sparkContext, log="/dev/null")
         # Read studyLocus
         study_locus = (
-            StudyLocus.from_parquet(session, study_locus_collected_path)
-            .df.filter(f.col("studyLocusId") == study_locus_to_finemap)
+            StudyLocus.from_parquet(session, study_locus_to_finemap)
+            .df.withColumn(
+                "studyLocusId", StudyLocus.assign_study_locus_id("studyId", "variantId")
+            )
             .collect()[0]
         )
         study_index = StudyIndex.from_parquet(session, study_index_path)
@@ -118,11 +116,11 @@ class SusieFineMapperStep:
         if result_logging is not None:
             # Write result
             result_logging["study_locus"].df.write.mode(session.write_mode).parquet(
-                output_path + "/" + study_locus_to_finemap
+                output_path
             )
             # Write log
             result_logging["log"].to_parquet(
-                output_path_log + "/" + study_locus_to_finemap + ".parquet",
+                output_path + ".log",
                 engine="pyarrow",
                 index=False,
             )
