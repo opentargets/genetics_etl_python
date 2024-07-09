@@ -83,10 +83,10 @@ class SummaryStatistics(Dataset):
 
     def locus_breaker_clumping(
         self: SummaryStatistics,
-        baseline_pvalue_cutoff: float = LocusBreakerClumpingConfig().baseline_pvalue_cutoff,
-        distance_cutoff: int = LocusBreakerClumpingConfig().distance_cutoff,
-        pvalue_cutoff: float = WindowBasedClumpingStepConfig().gwas_significance,
-        flanking_distance: int = LocusBreakerClumpingConfig().flanking_distance,
+        baseline_pvalue_cutoff: float = LocusBreakerClumpingConfig.lbc_baseline_pvalue,
+        distance_cutoff: int = LocusBreakerClumpingConfig.lbc_distance_cutoff,
+        pvalue_cutoff: float = LocusBreakerClumpingConfig.lbc_pvalue_threshold,
+        flanking_distance: int = LocusBreakerClumpingConfig.lbc_flanking_distance,
     ) -> StudyLocus:
         """Generate study-locus from summary statistics using locus-breaker clumping method with locus boundaries.
 
