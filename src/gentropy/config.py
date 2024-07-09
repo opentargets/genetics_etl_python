@@ -411,7 +411,6 @@ class FinemapperConfig(StepConfig):
         }
     )
     study_locus_to_finemap: str = MISSING
-    study_locus_collected_path: str = MISSING
     study_index_path: str = MISSING
     output_path: str = MISSING
     max_causal_snps: int = MISSING
@@ -427,7 +426,6 @@ class FinemapperConfig(StepConfig):
     carma_time_limit: int = MISSING
     imputed_r2_threshold: float = MISSING
     ld_score_threshold: float = MISSING
-    output_path_log: str = MISSING
     _target_: str = "gentropy.susie_finemapper.SusieFineMapperStep"
 
 
