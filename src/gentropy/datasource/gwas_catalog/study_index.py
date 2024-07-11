@@ -1,4 +1,5 @@
 """Study Index for GWAS Catalog data source."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -264,14 +265,14 @@ class StudyIndexGWASCatalogParser:
         |parsedCohorts                         |
         +--------------------------------------+
         |[BioME, CaPS, Estonia, FHS, UKB, GERA]|
-        |[null]                                |
+        |null                                  |
         +--------------------------------------+
         <BLANKLINE>
         """
         return f.when(
-            (raw_cohort.isNull()) | (raw_cohort == ""),
-            f.array(f.lit(None).cast(t.StringType())),
-        ).otherwise(f.array_distinct(f.split(raw_cohort, r"\|")))
+            (raw_cohort.isNotNull()) & (raw_cohort != ""),
+            f.array_distinct(f.split(raw_cohort, r"\|")),
+        )
 
     @classmethod
     def _parse_study_table(

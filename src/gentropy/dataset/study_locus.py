@@ -201,26 +201,6 @@ class StudyLocus(Dataset):
         )
 
     @staticmethod
-    def update_quality_flag(
-        qc: Column, flag_condition: Column, flag_text: StudyLocusQualityCheck
-    ) -> Column:
-        """Update the provided quality control list with a new flag if condition is met.
-
-        Args:
-            qc (Column): Array column with the current list of qc flags.
-            flag_condition (Column): This is a column of booleans, signing which row should be flagged
-            flag_text (StudyLocusQualityCheck): Text for the new quality control flag
-
-        Returns:
-            Column: Array column with the updated list of qc flags.
-        """
-        qc = f.when(qc.isNull(), f.array()).otherwise(qc)
-        return f.when(
-            flag_condition,
-            f.array_union(qc, f.array(f.lit(flag_text.value))),
-        ).otherwise(qc)
-
-    @staticmethod
     def assign_study_locus_id(study_id_col: Column, variant_id_col: Column) -> Column:
         """Hashes a column with a variant ID and a study ID to extract a consistent studyLocusId.
 

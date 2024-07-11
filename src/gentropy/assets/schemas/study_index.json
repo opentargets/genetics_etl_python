@@ -36,6 +36,16 @@
       "metadata": {}
     },
     {
+      "name": "diseaseIds",
+      "type": {
+        "type": "array",
+        "elementType": "string",
+        "containsNull": true
+      },
+      "nullable": true,
+      "metadata": {}
+    },
+    {
       "name": "geneId",
       "type": "string",
       "nullable": true,
@@ -79,6 +89,16 @@
     },
     {
       "name": "backgroundTraitFromSourceMappedIds",
+      "type": {
+        "type": "array",
+        "elementType": "string",
+        "containsNull": true
+      },
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "backgroundDiseaseIds",
       "type": {
         "type": "array",
         "elementType": "string",
