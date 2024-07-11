@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from gentropy.common.session import Session
+from gentropy.config import VariantIndexConfig
 from gentropy.dataset.variant_index import VariantIndex
 from gentropy.datasource.ensembl.vep_parser import VariantEffectPredictorParser
 
@@ -19,6 +20,7 @@ class VariantIndexStep:
         session: Session,
         vep_output_json_path: str,
         variant_index_path: str,
+        hash_threshold: int = VariantIndexConfig().hash_threshold,
         gnomad_variant_annotations_path: str | None = None,
     ) -> None:
         """Run VariantIndex step.
@@ -27,11 +29,12 @@ class VariantIndexStep:
             session (Session): Session object.
             vep_output_json_path (str): Variant effect predictor output path (in json format).
             variant_index_path (str): Variant index dataset path to save resulting data.
+            hash_threshold (int): Hash threshold for variant identifier lenght.
             gnomad_variant_annotations_path (str | None): Path to extra variant annotation dataset.
         """
         # Extract variant annotations from VEP output:
         variant_index = VariantEffectPredictorParser.extract_variant_index_from_vep(
-            session.spark, vep_output_json_path
+            session.spark, vep_output_json_path, hash_threshold
         )
 
         # Process variant annotations if provided:

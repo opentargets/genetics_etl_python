@@ -5,9 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import hail as hl
+import pyspark.sql.functions as f
+import pyspark.sql.types as t
 
 from gentropy.common.types import VariantPopulation
-from gentropy.config import GnomadVariantConfig
+from gentropy.config import GnomadVariantConfig, VariantIndexConfig
 from gentropy.dataset.variant_index import VariantIndex
 
 if TYPE_CHECKING:
@@ -23,17 +25,20 @@ class GnomADVariants:
         gnomad_variant_populations: list[
             VariantPopulation | str
         ] = GnomadVariantConfig().gnomad_variant_populations,
+        hash_threshold: int = VariantIndexConfig().hash_threshold,
     ):
         """Initialize.
 
         Args:
             gnomad_genomes_path (str): Path to gnomAD genomes hail table.
             gnomad_variant_populations (list[VariantPopulation | str]): List of populations to include.
+            hash_threshold (int): longer variant ids will be hashed.
 
         All defaults are stored in GnomadVariantConfig.
         """
         self.gnomad_genomes_path = gnomad_genomes_path
         self.gnomad_variant_populations = gnomad_variant_populations
+        self.lenght_threshold = hash_threshold
 
     def as_variant_index(self: GnomADVariants) -> VariantIndex:
         """Generate variant annotation dataset from gnomAD.
@@ -82,8 +87,6 @@ class GnomADVariants:
                             alleleFrequency=ht.freq[ht.globals.freq_index_dict[p]].AF,
                         )
                     ),
-                    # Extract most severe consequence:
-                    mostSevereConsequence=ht.vep.most_severe_consequence,
                     # Extract in silico predictors:
                     inSilicoPredictors=hl.array(
                         [
@@ -128,6 +131,16 @@ class GnomADVariants:
                 .drop("locus", "alleles")
                 .select_globals()
                 .to_spark(flatten=False)
+                .withColumn(
+                    "variantId",
+                    VariantIndex.hash_long_variant_ids(
+                        f.col("variantId"),
+                        f.col("chromosome"),
+                        f.col("position"),
+                        self.lenght_threshold,
+                    ),
+                )
+                .withColumn("mostSevereConsequenceId", f.lit(None).cast(t.StringType()))
             ),
             _schema=VariantIndex.get_schema(),
         )

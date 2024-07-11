@@ -6,11 +6,14 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from pyspark.sql import functions as f
+from pyspark.sql import types as t
 
 from gentropy.common.schemas import parse_spark_schema
 from gentropy.common.spark_helpers import (
     get_record_with_maximum_value,
     normalise_column,
+    rename_all_columns,
+    safe_array_union,
 )
 from gentropy.dataset.dataset import Dataset
 from gentropy.dataset.gene_index import GeneIndex
@@ -25,6 +28,28 @@ if TYPE_CHECKING:
 class VariantIndex(Dataset):
     """Dataset for representing variants and methods applied on them."""
 
+    def __post_init__(self: VariantIndex) -> None:
+        """Forcing the presence of empty arrays even if the schema allows missing values.
+
+        To bring in annotations from other sources, we use the `array_union()` function. However it assumes
+        both columns have arrays (not just the array schema!). If one of the array is null, the union
+        is nullified. This needs to be avoided.
+        """
+        # Calling dataset's post init to validate schema:
+        super().__post_init__()
+
+        # Composing a list of expressions to replace nulls with empty arrays if the schema assumes:
+        array_columns = {
+            column.name: f.when(f.col(column.name).isNull(), f.array()).otherwise(
+                f.col(column.name)
+            )
+            for column in self.df.schema
+            if "ArrayType" in column.dataType.__str__()
+        }
+
+        # Not returning, but changing the data:
+        self.df = self.df.withColumns(array_columns)
+
     @classmethod
     def get_schema(cls: type[VariantIndex]) -> StructType:
         """Provides the schema for the variant index dataset.
@@ -33,6 +58,61 @@ class VariantIndex(Dataset):
             StructType: Schema for the VariantIndex dataset
         """
         return parse_spark_schema("variant_index.json")
+
+    @staticmethod
+    def hash_long_variant_ids(
+        variant_id: Column, chromosome: Column, position: Column, threshold: int = 100
+    ) -> Column:
+        """Hash long variant identifiers.
+
+        Args:
+            variant_id (Column): Column containing variant identifiers.
+            chromosome (Column): Chromosome column.
+            position (Column): position column.
+            threshold (int): Above this limit, a hash will be generated.
+
+        Returns:
+            Column: Hashed variant identifiers for long variants.
+
+        Examples:
+            >>> (
+            ...    spark.createDataFrame([('v_short', 'x', 23),('v_looooooong', '23', 23), ('no_chrom', None, None), (None, None, None)], ['variantId', 'chromosome', 'position'])
+            ...    .select('variantId', VariantIndex.hash_long_variant_ids(f.col('variantId'), f.col('chromosome'), f.col('position'), 10).alias('hashedVariantId'))
+            ...    .show(truncate=False)
+            ... )
+            +------------+--------------------------------------------+
+            |variantId   |hashedVariantId                             |
+            +------------+--------------------------------------------+
+            |v_short     |v_short                                     |
+            |v_looooooong|OTVAR_23_23_3749d019d645894770c364992ae70a05|
+            |no_chrom    |OTVAR_41acfcd7d4fd523b33600b504914ef25      |
+            |null        |null                                        |
+            +------------+--------------------------------------------+
+            <BLANKLINE>
+        """
+        return (
+            # If either the position or the chromosome is missing, we hash the identifier:
+            f.when(
+                chromosome.isNull() | position.isNull(),
+                f.concat(
+                    f.lit("OTVAR_"),
+                    f.md5(variant_id).cast(t.StringType()),
+                ),
+            )
+            # If chromosome and position are given, but alleles are too long, create hash:
+            .when(
+                f.length(variant_id) > threshold,
+                f.concat_ws(
+                    "_",
+                    f.lit("OTVAR"),
+                    chromosome,
+                    position,
+                    f.md5(variant_id).cast(t.StringType()),
+                ),
+            )
+            # Missing and regular variant identifiers are left unchanged:
+            .otherwise(variant_id)
+        )
 
     def add_annotation(
         self: VariantIndex, annotation_source: VariantIndex
@@ -48,40 +128,50 @@ class VariantIndex(Dataset):
         Returns:
             VariantIndex: VariantIndex dataset with the annotation added
         """
-        # Columns in the source dataset:
-        variant_index_columns = [
-            # Combining cross-references:
-            f.array_union(f.col("dbXrefs"), f.col("annotation_dbXrefs"))
-            if row == "dbXrefs"
-            # Combining in silico predictors:
-            else f.array_union(
-                f.col("inSilicoPredictors"), f.col("annotation_inSilicoPredictors")
-            )
-            if row == "inSilicoPredictors"
-            # Combining allele frequencies:
-            else f.array_union(
-                f.col("alleleFrequencies"), f.col("annotation_alleleFrequencies")
-            )
-            if row == "alleleFrequencies"
-            # Carrying over all other columns:
-            else row
-            for row in self.df.columns
-        ]
+        # Prefix for renaming columns:
+        prefix = "annotation_"
 
-        # Rename columns in the annotation source to avoid conflicts:
-        annotation = annotation_source.df.select(
-            *[
-                f.col(col).alias(f"annotation_{col}") if col != "variantId" else col
-                for col in annotation_source.df.columns
-            ]
-        )
+        # Generate select expressions that to merge and import columns from annotation:
+        select_expressions = []
+
+        # Collect columns by iterating over the variant index schema:
+        for field in VariantIndex.get_schema():
+            column = field.name
+
+            # If an annotation column can be found in both datasets:
+            if (column in self.df.columns) and (column in annotation_source.df.columns):
+                # Arrays are merged:
+                if "ArrayType" in field.dataType.__str__():
+                    select_expressions.append(
+                        safe_array_union(
+                            f.col(column), f.col(f"{prefix}{column}")
+                        ).alias(column)
+                    )
+                # Non-array columns are coalesced:
+                else:
+                    select_expressions.append(
+                        f.coalesce(f.col(column), f.col(f"{prefix}{column}")).alias(
+                            column
+                        )
+                    )
+            # If the column is only found in the annotation dataset rename it:
+            elif column in annotation_source.df.columns:
+                select_expressions.append(f.col(f"{prefix}{column}").alias(column))
+            # If the column is only found in the main dataset:
+            elif column in self.df.columns:
+                select_expressions.append(f.col(column))
+            # VariantIndex columns not found in either dataset are ignored.
 
         # Join the annotation to the dataset:
         return VariantIndex(
             _df=(
-                annotation.join(
-                    f.broadcast(self.df), on="variantId", how="right"
-                ).select(*variant_index_columns)
+                f.broadcast(self.df)
+                .join(
+                    rename_all_columns(annotation_source.df, prefix),
+                    on=[f.col("variantId") == f.col(f"{prefix}variantId")],
+                    how="left",
+                )
+                .select(*select_expressions)
             ),
             _schema=self.schema,
         )

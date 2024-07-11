@@ -330,9 +330,12 @@ class GnomadVariantConfig(StepConfig):
 class VariantIndexConfig(StepConfig):
     """Variant index step configuration."""
 
+    session: SessionConfig = SessionConfig()
     vep_output_json_path: str = MISSING
     variant_index_path: str = MISSING
     gnomad_variant_annotations_path: str | None = None
+    hash_threshold: int = 300
+
     _target_: str = "gentropy.variant_index.VariantIndexStep"
 
 
@@ -510,7 +513,7 @@ def register_config() -> None:
     )
 
     cs.store(group="step", name="pics", node=PICSConfig)
-    cs.store(group="step", name="variant_annotation", node=GnomadVariantConfig)
+    cs.store(group="step", name="gnomad_variants", node=GnomadVariantConfig)
     cs.store(group="step", name="ukb_ppp_eur_sumstat_preprocess", node=UkbPppEurConfig)
     cs.store(group="step", name="variant_index", node=VariantIndexConfig)
     cs.store(group="step", name="variant_to_gene", node=VariantToGeneConfig)

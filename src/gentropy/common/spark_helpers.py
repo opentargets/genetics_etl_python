@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import sys
-from functools import wraps
+from functools import reduce, wraps
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Optional, TypeVar
 
 import pyspark.sql.functions as f
@@ -461,6 +461,15 @@ def enforce_schema(
     T = TypeVar("T", str, Column)
 
     def decorator(function: Callable[..., T]) -> Callable[..., T]:
+        """A decorator function to enforce the schema of a function output follows expectation.
+
+        Args:
+            function (Callable[..., T]): The function to be decorated.
+
+        Returns:
+            Callable[..., T]: The decorated function.
+        """
+
         @wraps(function)
         def wrapper(*args: str, **kwargs: str) -> Any:
             return f.from_json(f.to_json(function(*args, **kwargs)), expected_schema)
@@ -468,3 +477,69 @@ def enforce_schema(
         return wrapper
 
     return decorator
+
+
+def rename_all_columns(df: DataFrame, prefix: str) -> DataFrame:
+    """Given a prefix, rename all columns of a DataFrame.
+
+    Args:
+        df (DataFrame): The DataFrame to be processed.
+        prefix (str): The prefix to be added to the column names.
+
+    Returns:
+        DataFrame: The DataFrame with all columns renamed.
+
+    Examples:
+        >>> data = [('a', 1.2, True),('b', 0.0, False),('c', None, None),]
+        >>> prefix = 'prefix_'
+        >>> rename_all_columns(spark.createDataFrame(data, ['col1', 'col2', 'col3']), prefix).show()
+        +-----------+-----------+-----------+
+        |prefix_col1|prefix_col2|prefix_col3|
+        +-----------+-----------+-----------+
+        |          a|        1.2|       true|
+        |          b|        0.0|      false|
+        |          c|       null|       null|
+        +-----------+-----------+-----------+
+        <BLANKLINE>
+    """
+    return reduce(
+        lambda df, col: df.withColumnRenamed(col, f"{prefix}{col}"),
+        df.columns,
+        df,
+    )
+
+
+def safe_array_union(a: Column, b: Column) -> Column:
+    """Merge the content of two optional columns.
+
+    The function assumes the array columns have the same schema. Otherwise, the function will fail.
+
+    Args:
+        a (Column): One optional array column.
+        b (Column): The other optional array column.
+
+    Returns:
+        Column: array column with merged content.
+
+    Examples:
+        >>> data = [(['a'], ['b']), (['c'], None), (None, ['d']), (None, None)]
+        >>> (
+        ...    spark.createDataFrame(data, ['col1', 'col2'])
+        ...    .select(
+        ...        safe_array_union(f.col('col1'), f.col('col2')).alias('merged')
+        ...    )
+        ...    .show()
+        ... )
+        +------+
+        |merged|
+        +------+
+        |[a, b]|
+        |   [c]|
+        |   [d]|
+        |  null|
+        +------+
+        <BLANKLINE>
+    """
+    return f.when(a.isNotNull() & b.isNotNull(), f.array_union(a, b)).otherwise(
+        f.coalesce(a, b)
+    )

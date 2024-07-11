@@ -76,6 +76,7 @@ class VariantEffectPredictorParser:
         cls: type[VariantEffectPredictorParser],
         spark: SparkSession,
         vep_output_path: str | list[str],
+        hash_threshold: int = 100,
         **kwargs: bool | float | int | str | None,
     ) -> VariantIndex:
         """Extract variant index from VEP output.
@@ -83,6 +84,7 @@ class VariantEffectPredictorParser:
         Args:
             spark (SparkSession): Spark session.
             vep_output_path (str | list[str]): Path to the VEP output.
+            hash_threshold (int): Threshold above which variant identifiers will be hashed. Default is 100,
             **kwargs (bool | float | int | str | None): Additional arguments to pass to spark.read.json.
 
         Returns:
@@ -105,7 +107,9 @@ class VariantEffectPredictorParser:
 
         # Convert to VariantAnnotation dataset:
         return VariantIndex(
-            _df=VariantEffectPredictorParser.process_vep_output(vep_data),
+            _df=VariantEffectPredictorParser.process_vep_output(
+                vep_data, hash_threshold
+            ),
             _schema=VariantIndex.get_schema(),
         )
 
@@ -606,11 +610,14 @@ class VariantEffectPredictorParser:
         ]
 
     @classmethod
-    def process_vep_output(cls, vep_output: DataFrame) -> DataFrame:
+    def process_vep_output(
+        cls, vep_output: DataFrame, hash_threshold: int = 100
+    ) -> DataFrame:
         """Process and format a VEP output in JSON format.
 
         Args:
             vep_output (DataFrame): raw VEP output, read as spark DataFrame.
+            hash_threshold (int): threshold above which variant identifiers will be hashed.
 
         Returns:
            DataFrame: processed data in the right shape.
@@ -779,6 +786,18 @@ class VariantEffectPredictorParser:
                     )
                 ),
             )
+            # If the variantId is too long, hash it:
+            .withColumn(
+                "variantId",
+                VariantIndex.hash_long_variant_ids(
+                    f.col("variantId"),
+                    f.col("chromosome"),
+                    f.col("position"),
+                    hash_threshold,
+                ),
+            )
             # Dropping intermediate xref columns:
             .drop(*["ensembl_xrefs", "omim_xrefs", "clinvar_xrefs", "protvar_xrefs"])
+            # Drooping rows with null position:
+            .filter(f.col("position").isNotNull())
         )

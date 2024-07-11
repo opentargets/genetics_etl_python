@@ -33,7 +33,7 @@
     {
       "metadata": {},
       "name": "inSilicoPredictors",
-      "nullable": false,
+      "nullable": true,
       "type": {
         "containsNull": true,
         "elementType": {
@@ -77,7 +77,7 @@
     {
       "metadata": {},
       "name": "mostSevereConsequenceId",
-      "nullable": false,
+      "nullable": true,
       "type": "string"
     },
     {
@@ -207,13 +207,13 @@
         },
         "containsNull": true
       },
-      "nullable": false,
+      "nullable": true,
       "metadata": {}
     },
     {
       "metadata": {},
       "name": "dbXrefs",
-      "nullable": false,
+      "nullable": true,
       "type": {
         "containsNull": true,
         "elementType": {
