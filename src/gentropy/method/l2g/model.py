@@ -54,7 +54,7 @@ class LocusToGeneModel:
         Raises:
             ValueError: If the model has not been fitted yet
         """
-        loaded_model = sio.load(path, trusted=True)
+        loaded_model = sio.load(path, trusted=sio.get_untrusted_types(file=path))
         if not loaded_model._is_fitted():
             raise ValueError("Model has not been fitted yet.")
         return cls(model=loaded_model)
