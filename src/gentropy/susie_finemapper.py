@@ -22,7 +22,10 @@ from pyspark.sql.types import (
 )
 
 from gentropy.common.session import Session
-from gentropy.common.spark_helpers import neglog_pvalue_to_mantissa_and_exponent
+from gentropy.common.spark_helpers import (
+    neglog_pvalue_to_mantissa_and_exponent,
+    order_array_of_structs_by_field,
+)
 from gentropy.dataset.study_index import StudyIndex
 from gentropy.dataset.study_locus import StudyLocus
 from gentropy.dataset.summary_statistics import SummaryStatistics
@@ -1263,9 +1266,9 @@ class SusieFineMapperStep:
         study_index_df = study_index_df.filter(f.col("studyId") == studyId)
         major_population = study_index_df.select(
             "studyId",
-            f.array_max(f.col("ldPopulationStructure"))
-            .getItem("ldPopulation")
-            .alias("majorPopulation"),
+            order_array_of_structs_by_field(
+                "ldPopulationStructure", "relativeSampleSize"
+            )[0]["ldPopulation"].alias("majorPopulation"),
         ).collect()[0]["majorPopulation"]
 
         region = chromosome + ":" + str(int(locusStart)) + "-" + str(int(locusEnd))
