@@ -1,5 +1,0 @@
-defaults:
-  - gene_index
-
-target_path: ${datasets.target_index}
-gene_index_path: ${datasets.gene_index}

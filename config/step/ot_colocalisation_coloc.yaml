@@ -1,7 +1,0 @@
-defaults:
-  - colocalisation
-
-credible_set_path: ${datasets.credible_set}
-study_index_path: ${datasets.study_index}
-coloc_path: ${datasets.colocalisation}
-colocalisation_method: Coloc

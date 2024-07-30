@@ -1,7 +1,0 @@
-defaults:
-  - ld_based_clumping
-
-ld_index_path: ${datasets.ld_index}/2.1.1
-study_locus_input_path: ???
-study_index_path: ???
-clumped_study_locus_output_path: ???

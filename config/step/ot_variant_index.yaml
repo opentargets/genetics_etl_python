@@ -1,6 +1,0 @@
-defaults:
-  - variant_index
-
-vep_output_json_path: ${datasets.vep_output_path}
-gnomad_variant_annotations_path: ${datasets.gnomad_variants}
-variant_index_path: ${datasets.variant_index}

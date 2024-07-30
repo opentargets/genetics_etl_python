@@ -1,5 +1,0 @@
-defaults:
-  - config
-  - datasets: ot_gcp
-  - _self_
-  - override step/session: dataproc

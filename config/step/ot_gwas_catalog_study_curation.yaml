@@ -1,8 +1,0 @@
-defaults:
-  - gwas_catalog_study_curation
-
-catalog_study_files: ${datasets.gwas_catalog_studies}
-catalog_ancestry_files: ${datasets.gwas_catalog_ancestries}
-catalog_sumstats_lut: ${datasets.gwas_catalog_sumstats_lut}
-gwas_catalog_study_curation_file: ${datasets.gwas_catalog_study_curation}
-gwas_catalog_study_curation_out: ???
