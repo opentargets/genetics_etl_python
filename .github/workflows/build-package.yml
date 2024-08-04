@@ -1,0 +1,58 @@
+name: Build gentropy package artifact
+
+
+on: 
+  push:
+    branches: szsz-pipy-deployment-fix
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false # prevent hickups with semantic-release
+
+env:
+  PYTHON_VERSION_DEFAULT: "3.10.8"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency: release
+    permissions:
+      # NOTE: this enables trusted publishing.
+      # See https://github.com/pypa/gh-action-pypi-publish/tree/release/v1#trusted-publishing
+      # and https://blog.pypi.org/posts/2023-04-20-introducing-trusted-publishers/
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v1.7.0
+      - uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: build artifact
+        run: poetry build
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+  publish-to-pypi:
+    needs: release
+    name: >-
+      Publish 📦 in PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/gentropy
+    permissions:
+      id-token: write # IMPORTANT: mandatory for trusted publishing
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
