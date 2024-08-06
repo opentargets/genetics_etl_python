@@ -91,7 +91,7 @@ logging "Diseases were mapped to ${EFO} EFO release."
 RELEASE_URL=${BASE_URL}/releases/${YEAR}/${MONTH}/${DAY}
 logging "Datafiles are fetching from ${RELEASE_URL}"
 
-# Fetching files while assigning properly dated and annotated names:
+Fetching files while assigning properly dated and annotated names:
 fetch_from_ftp ${RELEASE_URL}/gwas-catalog-associations_ontology-annotated.tsv ${ASSOCIATION_FILE}
 
 fetch_from_ftp ${RELEASE_URL}/gwas-catalog-download-studies-v1.0.3.1.txt ${PUBLISHED_STUDIES_FILE}

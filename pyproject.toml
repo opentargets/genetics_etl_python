@@ -16,7 +16,7 @@ packages = [{ include = "gentropy", from = "src" }]
 "Documentation" = "https://opentargets.github.io/gentropy/"
 
 [tool.poetry.scripts]
-gentropy = "gentropy.cli:main"
+gentropy = "gentropy.cli:cli"
 
 [tool.poetry.dependencies]
 python = "^3.10, <3.11"
@@ -31,9 +31,10 @@ google = "^3.0.0"
 omegaconf = "^2.3.0"
 typing-extensions = "^4.9.0"
 scikit-learn = "^1.3.2"
-pandas = {extras = ["gcp", "parquet"], version = "^2.2.2"}
+pandas = { extras = ["gcp", "parquet"], version = "^2.2.2" }
 skops = ">=0.9,<0.11"
 google-cloud-secret-manager = "^2.20.0"
+click = "^8.1.7"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^3.7.0"
@@ -226,6 +227,7 @@ select = [
 ignore = [
   "E501", # line too long
   "E731", # do not assign a lambda expression, use a def
+  "D301", # Use r""" if any backslashes in a docstring
 
   # Ignore ignored, as the rule is now back in preview/nursery, which cannot
   # be ignored anymore without warnings.

@@ -1,23 +1,16 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
-      "name": "Python: Current File [dataproc]",
-      "type": "python",
+      "name": "Gentropy hydra cli",
+      "type": "debugpy",
       "request": "launch",
-      "program": "${file}",
       "console": "integratedTerminal",
-      "justMyCode": true,
-      "args": ["--config-dir=./configs"]
+      "justMyCode": false,
+      "program": "${workspaceFolder}/src/gentropy/cli/__init__.py",
+      "args": ["run"],
+      "python": "${command:python.interpreterPath}"
     },
-    {
-      "name": "Python: Current File [local]",
-      "type": "python",
-      "request": "launch",
-      "program": "${file}",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "args": ["--config-dir=./configs", "environment=local"]
-    }
   ]
 }
