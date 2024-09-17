@@ -51,11 +51,17 @@ class Dataset(ABC):
     def df(self: Dataset, new_df: DataFrame) -> None:  # noqa: CCE001
         """Dataframe setter.
 
-        Args:
-            new_df (DataFrame): New dataframe to be included in the Dataset
+        This setter calls for self._df setter for backwards compatibility.
         """
-        self._df: DataFrame = new_df
-        self.validate_schema()
+        self._df = new_df
+
+    @property
+    def _df(self: Dataset) -> DataFrame:
+        return self._df
+
+    @_df.setter
+    def _df(self, _) -> None:
+        raise AttributeError("Dataset property _df is unmutable")
 
     @property
     def schema(self: Dataset) -> StructType:
