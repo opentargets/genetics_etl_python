@@ -128,7 +128,7 @@ class L2GGoldStandard(Dataset):
                 "left",
             )
             .join(
-                f.broadcast(self.df.drop("studyLocusId", "sources")),
+                self.df.drop("studyLocusId", "sources"),
                 on=["studyId", "variantId", "geneId"],
                 how="inner",
             )
