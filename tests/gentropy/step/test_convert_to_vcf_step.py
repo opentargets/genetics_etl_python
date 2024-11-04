@@ -115,7 +115,6 @@ class TestConvertToVcfStep:
         )
         output_path = str(tmp_path / "variants")
         ConvertToVcfStep(session, [source_path], ["json"], output_path, 10)
-
         partitions = [
             str(p) for p in Path(output_path).iterdir() if str(p).endswith("csv")
         ]
@@ -125,24 +124,28 @@ class TestConvertToVcfStep:
             usecols=[0, 1],  # just read #CHROM and POS
             sep="\t",
         )
-        assert df.equals(
-            # values comes from input file tests/gentropy/data_samples/variant_sources/uniprot-test-sorting.jsonl
-            # NOTE: Natural ordering in CHROM (str) and POS (int)
-            pd.DataFrame(
-                [
-                    ("1", 1525242),
-                    ("1", 161306863),
-                    ("11", 108345818),
-                    ("2", 98396018),
-                    ("21", 44286656),
-                    ("3", 38585800),
-                    ("MT", 6277),
-                    ("X", 129562612),
-                    ("Y", 2787426),
-                ],
-                columns=["#CHROM", "POS"],
-            )
-        ), "Variant sorting does not match expectations."
+        # values comes from input file tests/gentropy/data_samples/variant_sources/uniprot-test-sorting.jsonl
+        # NOTE: Natural ordering in CHROM (str) and POS (int)
+        with open(partitions[0]) as fp:
+            assert fp.readline().startswith("CHROM\tPOS")
+
+        expected_df = pd.DataFrame(
+            [
+                ("1", 1525242),
+                ("1", 161306863),
+                ("11", 108345818),
+                ("2", 98396018),
+                ("21", 44286656),
+                ("3", 38585800),
+                ("MT", 6277),
+                ("X", 129562612),
+                ("Y", 2787426),
+            ],
+            columns=["CHROM", "POS"],
+        )
+
+        assert list(df.columns) == list(expected_df.columns)
+        assert df.equals(expected_df), "Variant sorting does not match expectations."
 
     def test_raises_assertion_imbalanced_arg_ratios(self, session: Session) -> None:
         """Test imbalanced argument ratio exception.

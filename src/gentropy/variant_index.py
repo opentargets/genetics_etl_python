@@ -64,7 +64,13 @@ class VariantIndexStep:
 
 
 class ConvertToVcfStep:
-    """Convert dataset with variant annotation to VCF step."""
+    """Convert dataset with variant annotation to VCF step.
+
+    This step converts in-house data source formats to VCF like format.
+
+    NOTE! Due to the csv DataSourceWriter limitations we can not save the column name
+    `#CHROM` as in vcf file. The column is replaced with `CHROM`.
+    """
 
     def __init__(
         self,
@@ -112,8 +118,14 @@ class ConvertToVcfStep:
             .sortWithinPartitions(f.col("#CHROM").asc(), f.col("POS").asc())
             # Due to the large number of partitions ensure we do not lose the partitions before saving them
             .persist()
+            # FIXME the #CHROM column is saved as "#CHROM" by pyspark which fails under VEP,
+            # The native solution would be to implement the datasource with proper writer
+            # see https://docs.databricks.com/en/pyspark/datasources.html.
+            # Proposed solution will require adding # at the start of the first line of
+            # vcf before processing it in orchestration.
+            .withColumnRenamed("#CHROM", "CHROM")
         )
         # Write
-        partitioned_variants.write.mode(session.write_mode).csv(
-            output_path, sep="\t", header=True
-        )
+        partitioned_variants.write.mode(session.write_mode).option("sep", "\t").option(
+            "quote", ""
+        ).option("quoteAll", False).option("header", True).csv(output_path)
