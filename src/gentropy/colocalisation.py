@@ -2,14 +2,24 @@
 
 from __future__ import annotations
 
-from functools import partial
+import logging
+from enum import Enum
+from functools import partial, reduce
 from typing import Any, Type
 
 from pyspark.sql.functions import col
 
 from gentropy.common.session import Session
 from gentropy.dataset.study_locus import FinemappingMethod, StudyLocus
+from gentropy.dataset.study_locus_overlap import StudyLocusOverlap
 from gentropy.method.colocalisation import Coloc, ColocalisationMethodInterface
+
+
+class OverlapRunMode(Enum):
+    """Modes to run the overlaps in colocalisation step."""
+
+    ITERATIVE = "iterative"
+    BATCH = "batch"
 
 
 class ColocalisationStep:
@@ -29,6 +39,7 @@ class ColocalisationStep:
         credible_set_path: str,
         coloc_path: str,
         colocalisation_method: str,
+        overlap_run_mode: OverlapRunMode,
         colocalisation_method_params: dict[str, Any] | None = None,
     ) -> None:
         """Run Colocalisation step.
@@ -40,6 +51,7 @@ class ColocalisationStep:
             credible_set_path (str): Input credible sets path.
             coloc_path (str): Output Colocalisation path.
             colocalisation_method (str): Colocalisation method.
+            overlap_run_mode (OverlapRunMode): The way how to parallelize the tasks when finding overlaps.
             colocalisation_method_params (dict[str, Any] | None): Keyword arguments passed to the colocalise method of Colocalisation class. Defaults to None
 
         Keyword Args:
@@ -47,25 +59,20 @@ class ColocalisationStep:
             priorc2 (float): Prior on variant being causal for trait 2. Defaults to 1e-4. For coloc method only.
             priorc12 (float): Prior on variant being causal for both traits. Defaults to 1e-5. For coloc method only.
         """
-        colocalisation_method = colocalisation_method.lower()
-        colocalisation_class = self._get_colocalisation_class(colocalisation_method)
-
-        # Extract
+        coloc_method = colocalisation_method.lower()
+        coloc_class = self._get_colocalisation_class(coloc_method)
         credible_set = StudyLocus.from_parquet(
-            session, credible_set_path, recusiveFileLookup=True
+            self.session, credible_set_path, recusiveFileLookup=True
         )
-        if colocalisation_method == Coloc.METHOD_NAME.lower():
-            credible_set = credible_set.filter(
-                col("finemappingMethod").isin(
-                    FinemappingMethod.SUSIE.value, FinemappingMethod.SUSIE_INF.value
-                )
-            )
 
-        # Transform
-        overlaps = credible_set.find_overlaps()
+        # Calculate overlaps
+        match overlap_run_mode:
+            case OverlapRunMode.ITERATIVE.value:
+                overlaps = self.__run_overlaps_iteratively()
+            case OverlapRunMode.BATCH.value:
+                overlaps = self.__run_overlaps_in_batch(credible_set, coloc_method)
 
-        # Make a partial caller to ensure that colocalisation_method_params are added to the call only when dict is not empty
-        coloc = colocalisation_class.colocalise
+        coloc = coloc_class.colocalise
         if colocalisation_method_params:
             coloc = partial(coloc, **colocalisation_method_params)
         colocalisation_results = coloc(overlaps)
@@ -73,6 +80,100 @@ class ColocalisationStep:
         colocalisation_results.df.write.mode(session.write_mode).parquet(
             f"{coloc_path}/{colocalisation_method.lower()}"
         )
+
+    def __run_overlaps_in_batch(
+        self, credible_set: StudyLocus, coloc_method: str
+    ) -> StudyLocusOverlap:
+        """Run overlaps in batch mode."""
+        if coloc_method == Coloc.METHOD_NAME.lower():
+            credible_set = credible_set.filter(
+                col("finemappingMethod").isin(
+                    FinemappingMethod.SUSIE.value, FinemappingMethod.SUSIE_INF.value
+                )
+            )
+
+        return credible_set.find_overlaps()
+
+    def __run_overlaps_iteratively(
+        self, credible_set: StudyLocus, coloc_method: str
+    ) -> StudyLocusOverlap:
+        """Run overlaps using iterative mode."""
+        susie_methods = [
+            FinemappingMethod.SUSIE.value,
+            FinemappingMethod.SUSIE_INF.value,
+        ]
+        iterative_map = {
+            "gwas_pics_vs_gwas_pics": {
+                "left": [
+                    col("studyType") == "gwas",
+                    col("finemappingMethod") == FinemappingMethod.PICS.value,
+                ],
+                "right": [
+                    col("studyType") == "gwas",
+                    col("finemappingMethod") == FinemappingMethod.PICS.value,
+                ],
+                "methods": ["ECaviar"],
+            },
+            "gwas_pics_vs_gwas_susie": {
+                "left": [
+                    col("studyType") == "gwas",
+                    col("finemappingMethod") == FinemappingMethod.PICS.value,
+                ],
+                "right": [
+                    col("studyType") == "gwas",
+                    col("finemappongMethod").isin(susie_methods),
+                ],
+                "methods": ["ECaviar"],
+            },
+            "gwas_susie_vs_gwas_susie": {
+                "left": [
+                    col("studyType") == "gwas",
+                    col("finemappongMethod").isin(susie_methods),
+                ],
+                "right": [
+                    col("studyType") == "gwas",
+                    col("finemappongMethod").isin(susie_methods),
+                ],
+                "methods": ["ECaviar", "Coloc"],
+            },
+            "gwas_susie_vs_qtl_susie": {
+                "left": [
+                    col("studyType") == "gwas",
+                    col("finemappingMethod").isin(susie_methods),
+                ],
+                "right": [
+                    col("studyType") != "gwas",
+                    col("finemappingMethod").isin(susie_methods),
+                ],
+                "methods": ["ECaviar", "Coloc"],
+            },
+            "gwas_pics_vs_qtl_susie": {
+                "left": [
+                    col("studyType") == "gwas",
+                    col("finemappingMethod") == FinemappingMethod.PICS.value,
+                ],
+                "right": [
+                    col("studyType") != "gwas",
+                    col("finemappingMethod").isin(susie_methods),
+                ],
+                "methods": ["ECaviar"],
+            },
+        }
+
+        results = []
+        for name, combination in iterative_map.items():
+            logging.info("Running overlaps on %s", name)
+            if coloc_method in combination["methods"]:
+                left = credible_set.filter(
+                    reduce(lambda x, y: x & y, combination["left"])
+                )
+                right = credible_set.filter(
+                    reduce(lambda x, y: x & y, combination["right"])
+                )
+
+        # Make a partial caller to ensure that colocalisation_method_params are added to the call only when dict is not empty
+
+        return credible_set.find_overlaps()
 
     @classmethod
     def _get_colocalisation_class(
