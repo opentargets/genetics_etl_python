@@ -130,15 +130,15 @@ class FinngenStudiesConfig(StepConfig):
         }
     )
     finngen_study_index_out: str = MISSING
-    finngen_phenotype_table_url: str = "https://r11.finngen.fi/api/phenos"
-    finngen_release_prefix: str = "FINNGEN_R11_"
+    finngen_phenotype_table_url: str = "https://r12.finngen.fi/api/phenos"
+    finngen_release_prefix: str = "FINNGEN_R12_"
     finngen_summary_stats_url_prefix: str = (
-        "gs://finngen-public-data-r11/summary_stats/finngen_R11_"
+        "gs://finngen-public-data-r12/summary_stats/finngen_R12_"
     )
     finngen_summary_stats_url_suffix: str = ".gz"
-    efo_curation_mapping_url: str = "https://raw.githubusercontent.com/opentargets/curation/24.09.1/mappings/disease/manual_string.tsv"
+    efo_curation_mapping_url: str = "https://raw.githubusercontent.com/opentargets/curation/25.02/mappings/disease/manual_string.tsv"
     # https://www.finngen.fi/en/access_results#:~:text=Total%20sample%20size%3A%C2%A0453%2C733%C2%A0(254%2C618%C2%A0females%20and%C2%A0199%2C115%20males)
-    sample_size: int = 453733
+    sample_size: int = 500_348
     _target_: str = "gentropy.finngen_studies.FinnGenStudiesStep"
 
 
@@ -152,14 +152,14 @@ class FinngenFinemappingConfig(StepConfig):
         }
     )
     finngen_susie_finemapping_snp_files: str = (
-        "gs://finngen-public-data-r11/finemap/full/susie/*.snp.bgz"
+        "gs://finngen-public-data-r12/finemap/full/susie/*.snp.bgz"
     )
     finngen_susie_finemapping_cs_summary_files: str = (
-        "gs://finngen-public-data-r11/finemap/summary/*SUSIE.cred.summary.tsv"
+        "gs://finngen-public-data-r12/finemap/summary/*SUSIE.cred.summary.tsv"
     )
     finngen_finemapping_out: str = MISSING
     finngen_finemapping_lead_pvalue_threshold: float = 1e-5
-    finngen_release_prefix: str = "FINNGEN_R11"
+    finngen_release_prefix: str = "FINNGEN_R12"
     _target_: str = (
         "gentropy.finngen_finemapping_ingestion.FinnGenFinemappingIngestionStep"
     )
