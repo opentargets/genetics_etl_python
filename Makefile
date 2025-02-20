@@ -72,7 +72,7 @@ create-dev-cluster: sync-cluster-init-script sync-gentropy-cli-script ## Spin up
 		--optional-components=JUPYTER \
 		--enable-component-gateway \
 		--labels team=open-targets,subteam=gentropy,created_by=${USER_SAFE},environment=development, \
-		--max-idle=60m
+		--max-idle=1d
 
 update-dev-cluster: build ## Reinstalls the package on the dev-cluster
 	@echo "Updating Dataproc Dev Cluster"
