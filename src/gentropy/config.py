@@ -217,7 +217,7 @@ class LDBasedClumpingConfig(StepConfig):
 
 
 @dataclass
-class IntervalConfig(StepConfig):
+class IntervalStepConfig(StepConfig):
     """Interval step configuration."""
 
     target_index_path: str = MISSING
@@ -812,3 +812,4 @@ def register_config() -> None:
     cs.store(group="step", name="finngen_ukb_meta_ingestion", node=FinngenUkbMetaConfig)
     cs.store(group="step", name="credible_set_qc", node=CredibleSetQCStepConfig)
     cs.store(group="step", name="foldx_integration", node=FoldXVariantAnnotationConfig)
+    cs.store(group="step", name="interval", node=IntervalStepConfig)
