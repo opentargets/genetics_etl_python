@@ -2,22 +2,18 @@
 
 from __future__ import annotations
 
-import logging
 from enum import StrEnum
-from functools import partial
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pyspark.sql.functions as f
-from py4j.protocol import Py4JJavaError
-from sklearn.ensemble import GradientBoostingClassifier
 from wandb.sdk.wandb_login import login as wandb_login
 
-from gentropy.common.schemas import compare_struct_schemas
 from gentropy.common.session import Session
 from gentropy.common.spark_helpers import calculate_harmonic_sum
 from gentropy.common.utils import access_gcp_secret
 from gentropy.dataset.colocalisation import Colocalisation
 from gentropy.dataset.l2g_feature_matrix import L2GFeatureMatrix
+from gentropy.dataset.l2g_features.namespace import L2GFeatureName
 from gentropy.dataset.l2g_gold_standard import L2GGoldStandard
 from gentropy.dataset.l2g_prediction import L2GPrediction
 from gentropy.dataset.study_index import StudyIndex
@@ -25,8 +21,11 @@ from gentropy.dataset.study_locus import StudyLocus
 from gentropy.dataset.target_index import TargetIndex
 from gentropy.dataset.variant_index import VariantIndex
 from gentropy.method.l2g.feature_factory import L2GFeatureInputLoader
-from gentropy.method.l2g.model import LocusToGeneModel
-from gentropy.method.l2g.trainer import LocusToGeneTrainer
+from gentropy.method.l2g.model import L2GModelWrapper
+from gentropy.method.l2g.trainer import L2GTrainer
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class RunMode(StrEnum):
@@ -106,140 +105,131 @@ class LocusToGeneFeatureMatrixStep:
         ).parquet(feature_matrix_path)
 
 
-class LocusToGeneStep:
-    """Locus to gene step."""
+class LocusToGeneTrainingFeatureMatrixStep:
+    """Prepare Training Feature Matrix from gold standard."""
 
     def __init__(
         self,
         session: Session,
         *,
-        run_mode: RunMode,
-        hyperparameters: dict[str, Any],
-        download_from_hub: bool,
-        cross_validate: bool,
-        wandb_run_name: str,
         credible_set_path: str,
         feature_matrix_path: str,
-        model_path: str | None = None,
-        features_list: list[str] | None,
-        gold_standard_curation_path: str | None = None,
-        variant_index_path: str | None = None,
-        gene_interactions_path: str | None = None,
-        predictions_path: str | None = None,
-        l2g_threshold: float | None = None,
-        hf_hub_repo_id: str | None = None,
-        hf_model_commit_message: str | None = "chore: update model",
+        gold_standard_path: str,
+        training_feature_matrix_path: str,
     ) -> None:
-        """Initialise the step and run the logic based on mode.
+        """Initialize the step and create a Feature matrix based on Gold standard for the L2G training.
 
         Args:
-            session (Session): Session object that contains the Spark session
-            run_mode (str): Run mode, either 'train' or 'predict'
-            hyperparameters (dict[str, Any]): Hyperparameters for the model
-            download_from_hub (bool): Whether to download the model from Hugging Face Hub
-            cross_validate (bool): Whether to run cross validation (5-fold by default) to train the model.
-            wandb_run_name (str): Name of the run to track model training in Weights and Biases
-            credible_set_path (str): Path to the credible set dataset necessary to build the feature matrix
-            feature_matrix_path (str): Path to the L2G feature matrix input dataset
-            model_path (str | None): Path to the model. It can be either in the filesystem or the name on the Hugging Face Hub (in the form of username/repo_name).
-            features_list (list[str] | None): List of features to use to train the model
-            gold_standard_curation_path (str | None): Path to the gold standard curation file
-            variant_index_path (str | None): Path to the variant index
-            gene_interactions_path (str | None): Path to the gene interactions dataset
-            predictions_path (str | None): Path to the L2G predictions output dataset
-            l2g_threshold (float | None): An optional threshold for the L2G score to filter predictions. A threshold of 0.05 is recommended.
-            hf_hub_repo_id (str | None): Hugging Face Hub repository ID. If provided, the model will be uploaded to Hugging Face.
-            hf_model_commit_message (str | None): Commit message when we upload the model to the Hugging Face Hub
+            session (Session):
+            credible_set_path (str):
+            feature_matrix_path (str):
+            gold_standard_curation_path (str):
+            training_feature_matrix_path (str):
 
-        Raises:
-            ValueError: If run_mode is not 'train' or 'predict'
         """
-        self.session = session
-        self.run_mode = run_mode
-        self.predictions_path = predictions_path
-        self.features_list = list(features_list) if features_list else None
-        self.hyperparameters = dict(hyperparameters)
-        self.wandb_run_name = wandb_run_name
-        self.cross_validate = cross_validate
-        self.hf_hub_repo_id = hf_hub_repo_id
-        self.download_from_hub = download_from_hub
-        self.hf_model_commit_message = hf_model_commit_message
-        self.l2g_threshold = l2g_threshold or 0.0
-        self.gold_standard_curation_path = gold_standard_curation_path
-        self.gene_interactions_path = gene_interactions_path
-        self.variant_index_path = variant_index_path
-        self.model_path = (
-            hf_hub_repo_id
-            if not model_path and download_from_hub and hf_hub_repo_id
-            else model_path
+        credible_set = StudyLocus.from_parquet(
+            session,
+            credible_set_path,
+            recursiveFileLookup=True,
         )
+        feature_matrix = L2GFeatureMatrix(_df=session.load_data(feature_matrix_path))
+        gold_standard = L2GGoldStandard.from_gold_standard(session, gold_standard_path)
+        training_fm = gold_standard.build_feature_matrix(feature_matrix, credible_set)
+        training_fm._df.write.parquet(training_feature_matrix_path)
 
-        # Load common inputs
-        self.credible_set = StudyLocus.from_parquet(
-            session, credible_set_path, recursiveFileLookup=True
-        )
-        self.feature_matrix = L2GFeatureMatrix(
-            _df=session.load_data(feature_matrix_path),
-        )
-        match run_mode:
-            case RunMode.PREDICT:
-                self.run_predict()
-            case RunMode.TRAIN:
-                self.gold_standard = self.prepare_gold_standard(
-                    gold_standard_curation_path
-                )
-                self.run_train()
 
-    def run_predict(self) -> None:
-        """Run the prediction step.
+class LocusToGeneTraining:
+    """Train Locus To Gene model."""
 
-        Raises:
-            ValueError: If predictions_path is not provided for prediction mode
-        """
-        if not self.predictions_path:
-            raise ValueError("predictions_path must be provided for prediction mode")
-        predictions = L2GPrediction.from_credible_set(
-            self.session,
-            self.credible_set,
-            self.feature_matrix,
-            model_path=self.model_path,
-            features_list=self.features_list,
-            hf_token=access_gcp_secret("hfhub-key", "open-targets-genetics-dev"),
-            download_from_hub=self.download_from_hub,
-        )
-        predictions.filter(f.col("score") >= self.l2g_threshold).add_features(
-            self.feature_matrix,
-        ).explain().df.coalesce(self.session.output_partitions).write.mode(
-            self.session.write_mode
-        ).parquet(self.predictions_path)
-        self.session.logger.info("L2G predictions saved successfully.")
+    def __init__(self, hyperparameters: dict, training_feature_matrix_glob: str):
+        l2g_model = L2GModelWrapper(hyperparameters=hyperparameters)
+        # read feature matrix with polars
+        import polars as pl
 
-    def run_train(self) -> None:
+        if not training_feature_matrix_glob.endswith("*.parquet"):
+            training_feature_matrix_glob = (
+                training_feature_matrix_glob.removesuffix("/") + "/*.parquet"
+            )
+
+        dataset = pl.read_parquet(training_feature_matrix_glob)
+
+    # def __init__(
+    #     self,
+    #     session: Session,
+    #     *,
+    #     run_mode: RunMode,
+    #     hyperparameters: dict[str, Any],
+    #     download_from_hub: bool,
+    #     cross_validate: bool,
+    #     wandb_run_name: str,
+    #     model_path: str | None = None,
+    #     features_list: Sequence[L2GFeatureName] | None,
+    #     gold_standard_path: str | None = None,
+    #     variant_index_path: str | None = None,
+    #     gene_interactions_path: str | None = None,
+    #     predictions_path: str | None = None,
+    #     l2g_threshold: float | None = None,
+    #     hf_hub_repo_id: str | None = None,
+    #     hf_model_commit_message: str | None = "chore: update model",
+    # ) -> None:
+    #     """Initialise the step and run the logic based on mode.
+
+    #     Args:
+    #         session (Session): Session object that contains the Spark session
+    #         run_mode (str): Run mode, either 'train' or 'predict'
+    #         hyperparameters (dict[str, Any]): Hyperparameters for the model
+    #         download_from_hub (bool): Whether to download the model from Hugging Face Hub
+    #         cross_validate (bool): Whether to run cross validation (5-fold by default) to train the model.
+    #         wandb_run_name (str): Name of the run to track model training in Weights and Biases
+    #         credible_set_path (str): Path to the credible set dataset necessary to build the feature matrix
+    #         feature_matrix_path (str): Path to the L2G feature matrix input dataset
+    #         model_path (str | None): Path to the model. It can be either in the filesystem or the name on the Hugging Face Hub (in the form of username/repo_name).
+    #         features_list (list[str] | None): List of features to use to train the model
+    #         gold_standard_curation_path (str | None): Path to the gold standard curation file
+    #         variant_index_path (str | None): Path to the variant index
+    #         gene_interactions_path (str | None): Path to the gene interactions dataset
+    #         predictions_path (str | None): Path to the L2G predictions output dataset
+    #         l2g_threshold (float | None): An optional threshold for the L2G score to filter predictions. A threshold of 0.05 is recommended.
+    #         hf_hub_repo_id (str | None): Hugging Face Hub repository ID. If provided, the model will be uploaded to Hugging Face.
+    #         hf_model_commit_message (str | None): Commit message when we upload the model to the Hugging Face Hub
+
+    #     Raises:
+    #         ValueError: If run_mode is not 'train' or 'predict'
+    #     """
+    # self.session = session
+    # self.run_mode = run_mode
+    # self.predictions_path = predictions_path
+    # self.hyperparameters = dict(hyperparameters)
+    # self.wandb_run_name = wandb_run_name
+    # self.cross_validate = cross_validate
+    # self.hf_hub_repo_id = hf_hub_repo_id
+    # self.download_from_hub = download_from_hub
+    # self.hf_model_commit_message = hf_model_commit_message
+    # self.l2g_threshold = l2g_threshold or 0.0
+    # self.gold_standard_curation_path = gold_standard_path
+    # self.gene_interactions_path = gene_interactions_path
+    # self.variant_index_path = variant_index_path
+    # self.model_path = (
+    #     hf_hub_repo_id
+    #     if not model_path and download_from_hub and hf_hub_repo_id
+    #     else model_path
+    # )
+
+    # Load common inputs
+
+    def run_train(
+        self,
+    ) -> None:
         """Run the training step.
 
         Raises:
             ValueError: If features list is not provided for model training.
         """
-        if self.features_list is None:
-            raise ValueError("Features list is required for model training.")
         # Initialize access to weights and biases
-        wandb_key = access_gcp_secret("wandb-key", "open-targets-genetics-dev")
-        wandb_login(key=wandb_key)
-
-        # Instantiate classifier and train model
-        l2g_model = LocusToGeneModel(
-            model=GradientBoostingClassifier(random_state=42, loss="log_loss"),
-            hyperparameters=self.hyperparameters,
-            features_list=self.features_list,
-        )
-
-        # Calculate the gold standard features
-        feature_matrix = self._annotate_gold_standards_w_feature_matrix()
+        # wandb_key = access_gcp_secret("wandb-key", "open-targets-genetics-dev")
+        # wandb_login(key=wandb_key)
 
         # Run the training
-        trained_model = LocusToGeneTrainer(
-            model=l2g_model, feature_matrix=feature_matrix
-        ).train(self.wandb_run_name, cross_validate=self.cross_validate)
 
         # Export the model
         if trained_model.training_data and trained_model.model and self.model_path:
@@ -257,19 +247,29 @@ class LocusToGeneStep:
                     commit_message=self.hf_model_commit_message,
                 )
 
-    def _annotate_gold_standards_w_feature_matrix(self) -> L2GFeatureMatrix:
-        """Generate the feature matrix of annotated gold standards.
+    # def run_predict(self) -> None:
+    #     """Run the prediction step.
 
-        Returns:
-            L2GFeatureMatrix: Feature matrix with gold standards annotated with features.
-        """
-        return (
-            self.gold_standard.build_feature_matrix(
-                self.feature_matrix, self.credible_set
-            )
-            .select_features(self.features_list)
-            .persist()
-        )
+    #     Raises:
+    #         ValueError: If predictions_path is not provided for prediction mode
+    #     """
+    #     if not self.predictions_path:
+    #         raise ValueError("predictions_path must be provided for prediction mode")
+    #     predictions = L2GPrediction.from_credible_set(
+    #         self.session,
+    #         self.credible_set,
+    #         self.feature_matrix,
+    #         model_path=self.model_path,
+    #         features_list=self.features_list,
+    #         hf_token=access_gcp_secret("hfhub-key", "open-targets-genetics-dev"),
+    #         download_from_hub=self.download_from_hub,
+    #     )
+    #     predictions.filter(f.col("score") >= self.l2g_threshold).add_features(
+    #         self.feature_matrix,
+    #     ).explain().df.coalesce(self.session.output_partitions).write.mode(
+    #         self.session.write_mode
+    #     ).parquet(self.predictions_path)
+    #     self.session.logger.info("L2G predictions saved successfully.")
 
 
 class LocusToGeneEvidenceStep:

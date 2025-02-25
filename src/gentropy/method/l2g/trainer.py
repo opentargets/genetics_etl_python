@@ -52,10 +52,8 @@ def reset_wandb_env() -> None:
             del os.environ[key]
 
 
-@dataclass
-class LocusToGeneTrainer:
-    """Modelling of what is the most likely causal gene associated with a given locus."""
-
+@dataclass(init=False)
+class L2GTrainer:
     model: LocusToGeneModel
     feature_matrix: L2GFeatureMatrix
 
@@ -70,16 +68,8 @@ class LocusToGeneTrainer:
     run: Run | None = None
     wandb_l2g_project_name: str = "gentropy-locus-to-gene"
 
-    def __post_init__(self) -> None:
-        """Set default features_list to feature_matrix's features_list if not provided."""
-        self.features_list = (
-            self.feature_matrix.features_list
-            if self.features_list is None
-            else self.features_list
-        )
-
     def fit(
-        self: LocusToGeneTrainer,
+        self: L2GTrainer,
     ) -> LocusToGeneModel:
         """Fit the pipeline to the feature matrix dataframe.
 
@@ -95,9 +85,9 @@ class LocusToGeneTrainer:
             and self.y_train is not None
             and self.features_list is not None
         ):
-            assert self.x_train.size != 0 and self.y_train.size != 0, (
-                "Train data not set, nothing to fit."
-            )
+            assert (
+                self.x_train.size != 0 and self.y_train.size != 0
+            ), "Train data not set, nothing to fit."
             fitted_model = self.model.model.fit(X=self.x_train, y=self.y_train)
             self.model = LocusToGeneModel(
                 model=fitted_model,
@@ -109,7 +99,7 @@ class LocusToGeneTrainer:
         raise ValueError("Train data not set, nothing to fit.")
 
     def _get_shap_explanation(
-        self: LocusToGeneTrainer,
+        self: L2GTrainer,
         model: LocusToGeneModel,
     ) -> Explanation:
         """Get the SHAP values for the given model and data. We pass the full X matrix (without the labels) to interpret their shap values.
@@ -144,9 +134,7 @@ class LocusToGeneTrainer:
 
         raise ValueError("Train data not set.")
 
-    def log_plot_image_to_wandb(
-        self: LocusToGeneTrainer, title: str, plot: Axes
-    ) -> None:
+    def log_plot_image_to_wandb(self: L2GTrainer, title: str, plot: Axes) -> None:
         """Accepts a plot object, and saves the fig to PNG to then log it in W&B.
 
         Args:
@@ -168,7 +156,7 @@ class LocusToGeneTrainer:
         os.remove("tmp.png")
 
     def log_to_wandb(
-        self: LocusToGeneTrainer,
+        self: L2GTrainer,
         wandb_run_name: str,
     ) -> None:
         """Log evaluation results and feature importance to W&B to compare between different L2G runs.
@@ -191,9 +179,9 @@ class LocusToGeneTrainer:
             or self.features_list is None
         ):
             raise RuntimeError("Train data not set, we cannot log to W&B.")
-        assert self.x_train.size != 0 and self.y_train.size != 0, (
-            "Train data not set, nothing to evaluate."
-        )
+        assert (
+            self.x_train.size != 0 and self.y_train.size != 0
+        ), "Train data not set, nothing to evaluate."
         fitted_classifier = self.model.model
         y_predicted = fitted_classifier.predict(self.x_test)
         y_probas = fitted_classifier.predict_proba(self.x_test)
@@ -284,7 +272,7 @@ class LocusToGeneTrainer:
         self.run.finish()
 
     def train(
-        self: LocusToGeneTrainer,
+        self: L2GTrainer,
         wandb_run_name: str,
         cross_validate: bool = True,
         n_splits: int = 5,
@@ -347,7 +335,7 @@ class LocusToGeneTrainer:
         return self.model
 
     def cross_validate(
-        self: LocusToGeneTrainer,
+        self: L2GTrainer,
         wandb_run_name: str,
         parameter_grid: dict[str, Any] | None = None,
         n_splits: int = 5,

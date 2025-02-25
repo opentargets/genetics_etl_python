@@ -9,6 +9,7 @@ from pyspark.sql import Window
 
 from gentropy.common.spark_helpers import convert_from_wide_to_long
 from gentropy.dataset.l2g_features.l2g_feature import L2GFeature
+from gentropy.dataset.l2g_features.namespace import L2GDistanceFeatureName
 from gentropy.dataset.l2g_gold_standard import L2GGoldStandard
 from gentropy.dataset.study_locus import StudyLocus
 from gentropy.dataset.target_index import TargetIndex
@@ -113,7 +114,9 @@ def common_neighbourhood_distance_feature_logic(
     return (
         # Then compute mean distance in the vicinity (feature will be the same for any gene associated with a studyLocus)
         local_metric.join(
-            target_index.df.filter(f.col("biotype") == "protein_coding").select(f.col("id").alias("geneId")),
+            target_index.df.filter(f.col("biotype") == "protein_coding").select(
+                f.col("id").alias("geneId")
+            ),
             "geneId",
             "inner",
         )
@@ -143,7 +146,7 @@ class DistanceTssMeanFeature(L2GFeature):
     """Average distance of all tagging variants to gene TSS."""
 
     feature_dependency_type = VariantIndex
-    feature_name = "distanceTssMean"
+    feature_name = L2GDistanceFeatureName.DISTANCE_TSS_MEAN.value
 
     @classmethod
     def compute(
@@ -186,7 +189,7 @@ class DistanceTssMeanNeighbourhoodFeature(L2GFeature):
     """Minimum mean distance to TSS for all genes in the vicinity of a studyLocus."""
 
     feature_dependency_type = [VariantIndex, TargetIndex]
-    feature_name = "distanceTssMeanNeighbourhood"
+    feature_name = L2GDistanceFeatureName.DISTANCE_TSS_MEAN_NEIGHBOURHOOD.value
 
     @classmethod
     def compute(
@@ -224,7 +227,7 @@ class DistanceSentinelTssFeature(L2GFeature):
     """Distance of the sentinel variant to gene TSS. This is not weighted by the causal probability."""
 
     feature_dependency_type = VariantIndex
-    feature_name = "distanceSentinelTss"
+    feature_name = L2GDistanceFeatureName.DISTANCE_SENTINEL_TSS.value
 
     @classmethod
     def compute(
@@ -262,7 +265,7 @@ class DistanceSentinelTssNeighbourhoodFeature(L2GFeature):
     """Distance between the sentinel variant and a gene TSS as a relation of the distnace with all the genes in the vicinity of a studyLocus. This is not weighted by the causal probability."""
 
     feature_dependency_type = [VariantIndex, TargetIndex]
-    feature_name = "distanceSentinelTssNeighbourhood"
+    feature_name = L2GDistanceFeatureName.DISTANCE_SENTINEL_TSS_NEIGHBOURHOOD.value
 
     @classmethod
     def compute(
@@ -300,7 +303,7 @@ class DistanceFootprintMeanFeature(L2GFeature):
     """Average distance of all tagging variants to the footprint of a gene."""
 
     feature_dependency_type = VariantIndex
-    feature_name = "distanceFootprintMean"
+    feature_name = L2GDistanceFeatureName.DISTANCE_TSS_MEAN.value
 
     @classmethod
     def compute(
@@ -343,7 +346,7 @@ class DistanceFootprintMeanNeighbourhoodFeature(L2GFeature):
     """Minimum mean distance to footprint for all genes in the vicinity of a studyLocus."""
 
     feature_dependency_type = [VariantIndex, TargetIndex]
-    feature_name = "distanceFootprintMeanNeighbourhood"
+    feature_name = L2GDistanceFeatureName.DISTANCE_FOOTPRINT_MEAN_NEIGHBOURHOOD.value
 
     @classmethod
     def compute(
@@ -381,7 +384,7 @@ class DistanceSentinelFootprintFeature(L2GFeature):
     """Distance between the sentinel variant and the footprint of a gene."""
 
     feature_dependency_type = VariantIndex
-    feature_name = "distanceSentinelFootprint"
+    feature_name = L2GDistanceFeatureName.DISTANCE_SENTINEL_FOOTPRINT.value
 
     @classmethod
     def compute(
@@ -419,7 +422,9 @@ class DistanceSentinelFootprintNeighbourhoodFeature(L2GFeature):
     """Distance between the sentinel variant and a gene footprint as a relation of the distnace with all the genes in the vicinity of a studyLocus. This is not weighted by the causal probability."""
 
     feature_dependency_type = [VariantIndex, TargetIndex]
-    feature_name = "distanceSentinelFootprintNeighbourhood"
+    feature_name = (
+        L2GDistanceFeatureName.DISTANCE_SENTINEL_FOOTPRINT_NEIGHBOURHOOD.value
+    )
 
     @classmethod
     def compute(

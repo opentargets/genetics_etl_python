@@ -11,7 +11,10 @@ from loguru import logger
 from py4j.protocol import Py4JJavaError
 from pyspark.sql import Window
 
-from gentropy.common.schemas import compare_struct_schemas, parse_spark_schema
+from gentropy.common.schemas import (
+    SchemaValidationError,
+    parse_spark_schema,
+)
 from gentropy.common.session import Session
 from gentropy.common.spark_helpers import get_record_with_maximum_value
 from gentropy.dataset.dataset import Dataset
@@ -35,13 +38,18 @@ class L2GGoldStandard(Dataset):
     GS_NEGATIVE_LABEL = "negative"
 
     @classmethod
-    def from_gold_standard_curation(
-        cls: type[L2GGoldStandard], session: Session, curation_path: str
+    def from_gold_standard(
+        cls: type[L2GGoldStandard], session: Session, gold_standard_path: str
     ) -> L2GGoldStandard:
-        """Prepare the gold standard for training.
+        """Prepare the gold standard for training from default dataset.
+
+        This method is simillar to `Dataset.from_parquet` but allows for reading from either
+        - json
+        - parquet
 
         Args:
-            curation_path (str): Path to the gold standard curation file, must be either JSON or parquet.
+            session (Session): Gentropy session object.
+            gold_standard_path (str): Path to the gold standard curation file, must be either JSON or parquet.
 
         Returns:
             L2GGoldStandard: training dataset.
@@ -49,30 +57,45 @@ class L2GGoldStandard(Dataset):
         Raises:
             ValueError: When gold standard path, is not provided, or when
                 parsing OTG gold standard but missing interactions and variant index paths.
-            TypeError: When gold standard is not OTG gold standard nor L2GGoldStandard.
+            SchemaValidationError: When gold standard is not L2GGoldStandard.
 
         """
-        loader = partial(session.load_data, path=curation_path)
+        loader = partial(session.load_data, path=gold_standard_path)
         try:
             gold_standard = loader(format="parquet")
         except Py4JJavaError:
             gold_standard = loader(format="json")
 
-        schema_issues = compare_struct_schemas(
-            gold_standard.schema, L2GGoldStandard.get_schema()
-        )
-        # Parse the gold standard depending on the input schema
-        match schema_issues:
-            case {**extra} if not extra:
-                # Schema is the same as L2GGoldStandard - load the GS
-                # NOTE: match to empty dict will be non-selective
-                # see https://stackoverflow.com/questions/75389166/how-to-match-an-empty-dictionary
-                return L2GGoldStandard(
-                    _df=gold_standard,
-                    _schema=L2GGoldStandard.get_schema(),
-                )
-            case _:
-                raise TypeError("Incorrect gold standard dataset provided.")
+        try:
+            return L2GGoldStandard(_df=gold_standard)
+        except SchemaValidationError as e:
+            match e.errors:
+                # NOTE: Specific case when user provides the old Genetics Portal gold standard,
+                # We are not parsing it since, this requires access to the intervals, variant index
+                # and credible sets, the user gets redirected to build the L2GGoldStandard another method first.
+                case {
+                    "missing_mandatory_columns": [
+                        "studyLocusId",
+                        "variantId",
+                        "studyId",
+                        "geneId",
+                        "goldStandardSet",
+                    ],
+                    "unexpected_columns": [
+                        "association_info",
+                        "gold_standard_info",
+                        "metadata",
+                        "sentinel_variant",
+                        "trait_info",
+                    ],
+                }:
+                    logger.error(
+                        "Prepare gold standard dataset with `L2GGoldStandard.from_otg_curation` first."
+                    )
+                    raise e
+
+                case _:
+                    raise e
 
     @classmethod
     def from_otg_curation(
@@ -85,9 +108,9 @@ class L2GGoldStandard(Dataset):
         """Initialise L2GGoldStandard from source dataset.
 
         Args:
-            gold_standard_curation (DataFrame): Gold standard curation dataframe, extracted from
-            credible_sets (StudyLocus): Credible sets used to annotate gold standard sentinel variant.
-            variant_index (VariantIndex): Dataset to bring distance between a variant and a gene's footprint
+            otg_curation (DataFrame): Gold standard defined by OpenTargetsL2GGoldStandard datasource.
+            credible_sets (StudyLocus): Dataset to build the overlaps to the loci from OpenTargetsL2GGoldStandard.
+            variant_index (VariantIndex): Dataset to bring distance between a variant and a gene's footprint.
             interactions (DataFrame): Gene-gene interactions dataset to remove negative cases where the gene interacts with a positive gene
 
         Returns:
@@ -97,7 +120,10 @@ class L2GGoldStandard(Dataset):
             OpenTargetsL2GGoldStandard,
         )
 
-        study_locus_overlap = StudyLocus(
+        interactions_df = cls.process_gene_interactions(interactions)
+        # There are schema mismatches, this would mean that we have
+
+        curation_overlaps = StudyLocus(
             _df=credible_sets.df.join(
                 otg_curation.select(
                     f.concat_ws(
@@ -118,11 +144,9 @@ class L2GGoldStandard(Dataset):
             _schema=StudyLocus.get_schema(),
         ).find_overlaps()
 
-        interactions_df = cls.process_gene_interactions(interactions)
-
         return (
             OpenTargetsL2GGoldStandard.as_l2g_gold_standard(otg_curation, variant_index)
-            .filter_unique_associations(study_locus_overlap)
+            .filter_unique_associations(curation_overlaps)
             .remove_false_negatives(interactions_df)
         )
 

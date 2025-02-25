@@ -8,6 +8,7 @@ import pyspark.sql.functions as f
 
 from gentropy.common.spark_helpers import convert_from_wide_to_long
 from gentropy.dataset.l2g_features.l2g_feature import L2GFeature
+from gentropy.dataset.l2g_features.namespace import L2GFeatureName
 from gentropy.dataset.l2g_gold_standard import L2GGoldStandard
 from gentropy.dataset.study_locus import CredibleSetConfidenceClasses, StudyLocus
 from gentropy.dataset.target_index import TargetIndex
@@ -148,7 +149,7 @@ class GeneCountFeature(L2GFeature):
     """Counts the number of genes within a specified window size from the study locus."""
 
     feature_dependency_type = TargetIndex
-    feature_name = "geneCount500kb"
+    feature_name = L2GFeatureName.GENE_COUNT_500_KB.value
 
     @classmethod
     def compute(
@@ -188,7 +189,7 @@ class ProteinGeneCountFeature(L2GFeature):
     """Counts the number of protein coding genes within a specified window size from the study locus."""
 
     feature_dependency_type = TargetIndex
-    feature_name = "proteinGeneCount500kb"
+    feature_name = L2GFeatureName.PROTEIN_CODING_GENE_COUNT_500_KB.value
 
     @classmethod
     def compute(
@@ -229,7 +230,7 @@ class ProteinCodingFeature(L2GFeature):
     """Indicates whether a gene is protein-coding within a specified window size from the study locus."""
 
     feature_dependency_type = VariantIndex
-    feature_name = "isProteinCoding"
+    feature_name = L2GFeatureName.PROTEIN_CODING.value
 
     @classmethod
     def compute(
@@ -269,7 +270,7 @@ class CredibleSetConfidenceFeature(L2GFeature):
     """Distance of the sentinel variant to gene TSS. This is not weighted by the causal probability."""
 
     feature_dependency_type = [StudyLocus, VariantIndex]
-    feature_name = "credibleSetConfidence"
+    feature_name = L2GFeatureName.CREDIBLE_SET_CONFIDENCE.value
 
     @classmethod
     def compute(
