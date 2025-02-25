@@ -85,3 +85,7 @@ update-dev-cluster: build ## Reinstalls the package on the dev-cluster
 
 build: clean ## Build Python package with dependencies
 	@uv build
+
+
+create-gentropy-image: ## Build gentropy docker image
+	@docker build -t gentropy:${REF} .
