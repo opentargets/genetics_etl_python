@@ -22,27 +22,9 @@
           "fields": [
             {
               "metadata": {},
-              "name": "conservation",
-              "nullable": true,
-              "type": "double"
-            },
-            {
-              "metadata": {},
               "name": "hgvsg",
               "nullable": true,
               "type": "string"
-            },
-            {
-              "metadata": {},
-              "name": "cadd_phred",
-              "nullable": true,
-              "type": "double"
-            },
-            {
-              "metadata": {},
-              "name": "cadd_raw",
-              "nullable": true,
-              "type": "double"
             },
             {
               "metadata": {},
@@ -63,12 +45,6 @@
             {
               "metadata": {},
               "name": "variant_allele",
-              "nullable": true,
-              "type": "string"
-            },
-            {
-              "metadata": {},
-              "name": "gene_id",
               "nullable": true,
               "type": "string"
             }
