@@ -64,7 +64,7 @@ class OpenTargetsFoldX:
                 # Collapse all predictors for a single array object to avoid variant explosions:
                 .groupBy("uniprotAccession", "aminoAcidChange")
                 .agg(
-                    f.collect_set(f.col("fold_prediction")).alias(
+                    f.collect_set(f.col("foldx_prediction")).alias(
                         "variantEffect"
                     )
                 )

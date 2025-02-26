@@ -688,19 +688,7 @@ class VariantEffectPredictorParser:
                     ),
                 )
                 .otherwise(
-                    # Extract CADD scores from intergenic object:
                     f.array(
-                        cls._vep_variant_effect_extractor(
-                            transcript_column_name="intergenic_consequences",
-                            method_name="CADD",
-                            score_column_name="cadd_phred",
-                        ),
-                        # Extract GERP conservation score:
-                        cls._vep_variant_effect_extractor(
-                            method_name="GERP",
-                            transcript_column_name="intergenic_consequences",
-                            score_column_name="conservation",
-                        ),
                         # Extract VEP prediction:
                         cls._get_vep_prediction(f.col("most_severe_consequence")),
                     )
