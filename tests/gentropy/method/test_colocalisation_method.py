@@ -249,7 +249,7 @@ def test_coloc(mock_study_locus_overlap: StudyLocusOverlap) -> None:
                         "right_logBF": 10.5,
                         "left_beta": 0.5,
                         "right_beta": 0.2,
-                        "left_posteriorProbability": 0.36,
+                        "left_posteriorProbability": 0.09,
                         "right_posteriorProbability": 0.92,
                     },
                 },
