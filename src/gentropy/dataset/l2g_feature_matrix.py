@@ -10,6 +10,7 @@ from pyspark.sql import Window
 from typing_extensions import Self
 
 from gentropy.common.spark_helpers import convert_from_long_to_wide
+from gentropy.dataset import Dataset
 from gentropy.dataset.l2g_gold_standard import L2GGoldStandard
 from gentropy.method.l2g.feature_factory import FeatureFactory, L2GFeatureInputLoader
 
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from gentropy.dataset.study_locus import StudyLocus
 
 
-class L2GFeatureMatrix:
+class L2GFeatureMatrix(Dataset):
     """Dataset with features for Locus to Gene prediction."""
 
     def __init__(
