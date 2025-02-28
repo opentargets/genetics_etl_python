@@ -1,37 +1,50 @@
 {
   "fields": [
     {
-      "metadata": {},
+      "metadata": {
+        "description": "The unique identifier for the variant following schema: {chromosome}-{position}-{referenceAllele}-{alternateAllele}",
+        "isPrimaryKey": true
+      },
       "name": "variantId",
       "nullable": false,
       "type": "string"
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "The chromosome on which the variant is located"
+      },
       "name": "chromosome",
       "nullable": false,
       "type": "string"
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "The position on the chromosome of the variant"
+      },
       "name": "position",
       "nullable": false,
       "type": "integer"
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "The reference allele for the variant"
+      },
       "name": "referenceAllele",
       "nullable": false,
       "type": "string"
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "The alternate allele for the variant"
+      },
       "name": "alternateAllele",
       "nullable": false,
       "type": "string"
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "List predicted or measured effect of the variant based on various methods"
+      },
       "name": "variantEffect",
       "nullable": true,
       "type": {
@@ -39,37 +52,49 @@
         "elementType": {
           "fields": [
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The method name used to predict the effect of the variant"
+              },
               "name": "method",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Textual assessment of the variant effect"
+              },
               "name": "assessment",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The score of the variant effect"
+              },
               "name": "score",
               "nullable": true,
               "type": "float"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Flagging if the variant effect is considered pathogenic"
+              },
               "name": "assessmentFlag",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The target identifier on which the variant effect is interpreted"
+              },
               "name": "targetId",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Variant effect normalised between -1 and 1"
+              },
               "name": "normalisedScore",
               "nullable": true,
               "type": "double"
@@ -81,7 +106,9 @@
       }
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "The sequence ontology identifier of the most severe consequence of the variant based on VEP"
+      },
       "name": "mostSevereConsequenceId",
       "nullable": true,
       "type": "string"
@@ -95,7 +122,9 @@
         "elementType": {
           "fields": [
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The sequence ontology identifier of the consequence of the variant based on VEP in the context of the transcript"
+              },
               "name": "variantFunctionalConsequenceIds",
               "nullable": true,
               "type": {
@@ -105,13 +134,17 @@
               }
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The amino acide change caused by this variant on this gene"
+              },
               "name": "aminoAcidChange",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "List of Uniprot identifiers of the gene product"
+              },
               "name": "uniprotAccessions",
               "nullable": true,
               "type": {
@@ -121,97 +154,129 @@
               }
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Flagging if the transcript is the canonical transcript for the gene"
+              },
               "name": "isEnsemblCanonical",
               "nullable": false,
               "type": "boolean"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The affected codon in the transcript"
+              },
               "name": "codons",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The distance of the variant from the transcript"
+              },
               "name": "distanceFromFootprint",
               "nullable": true,
               "type": "long"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The distance of the variant from the transcription start site"
+              },
               "name": "distanceFromTss",
               "nullable": true,
               "type": "long"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The appris annotation of the transcript"
+              },
               "name": "appris",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "MANE annotation of the transcript"
+              },
               "name": "maneSelect",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Ensembl gene identifier"
+              },
               "name": "targetId",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "VEP predicted impact of the variant on the transcript"
+              },
               "name": "impact",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Loss of function prediction based on LOFTEE"
+              },
               "name": "lofteePrediction",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "SIFT prediction of the variant impact on the transcript"
+              },
               "name": "siftPrediction",
               "nullable": true,
               "type": "float"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Polyphen prediction of the variant impact on the transcript"
+              },
               "name": "polyphenPrediction",
               "nullable": true,
               "type": "float"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Score based on VEP consequence"
+              },
               "name": "consequenceScore",
               "nullable": true,
               "type": "float"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The index of the transcript in the list of transcripts around the gene"
+              },
               "name": "transcriptIndex",
               "nullable": true,
               "type": "integer"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The HGNC gene symbol of the gene"
+              },
               "name": "approvedSymbol",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Biotype of the transcript"
+              },
               "name": "biotype",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "The Ensembl transcript identifier"
+              },
               "name": "transcriptId",
               "nullable": true,
               "type": "string"
@@ -223,7 +288,9 @@
       }
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "The list of rsIds for the variant"
+      },
       "name": "rsIds",
       "nullable": true,
       "type": {
@@ -233,7 +300,9 @@
       }
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "HGVS identifier of the variant"
+      },
       "name": "hgvsId",
       "nullable": true,
       "type": "string"
@@ -249,23 +318,31 @@
               "name": "populationName",
               "type": "string",
               "nullable": true,
-              "metadata": {}
+              "metadata": {
+                "description": "Name of the population"
+              }
             },
             {
               "name": "alleleFrequency",
               "type": "double",
               "nullable": true,
-              "metadata": {}
+              "metadata": {
+                "description": "The frequency of the alternate allele in the population"
+              }
             }
           ]
         },
         "containsNull": true
       },
       "nullable": true,
-      "metadata": {}
+      "metadata": {
+        "description": "The allele frequencies of the variant in different populations"
+      }
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "The list of cross-references for the variant in different databases"
+      },
       "name": "dbXrefs",
       "nullable": true,
       "type": {
@@ -273,13 +350,17 @@
         "elementType": {
           "fields": [
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Identifier of the variant in the given database"
+              },
               "name": "id",
               "nullable": true,
               "type": "string"
             },
             {
-              "metadata": {},
+              "metadata": {
+                "description": "Name of the database"
+              },
               "name": "source",
               "nullable": true,
               "type": "string"
@@ -291,7 +372,9 @@
       }
     },
     {
-      "metadata": {},
+      "metadata": {
+        "description": "Short summary of the variant effect"
+      },
       "name": "variantDescription",
       "nullable": true,
       "type": "string"

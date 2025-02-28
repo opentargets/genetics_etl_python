@@ -166,11 +166,11 @@ def compare_struct_schemas(
         schema_issues["missing_mandatory_columns"] += missing_required_fields
 
     # Converting schema to dictionaries for easier comparison:
-    observed_schema_dict = {field.name: field for field in observed_schema}
     expected_schema_dict = {field.name: field for field in expected_schema}
 
     # Testing optional fields and types:
-    for field_name, field in observed_schema_dict.items():
+    for field in observed_schema:
+        field_name = field.name
         # Testing observed field name, if name is not matched, no further tests are needed:
         if field_name not in expected_schema_dict:
             schema_issues["unexpected_columns"].append(
@@ -208,5 +208,11 @@ def compare_struct_schemas(
                 f"{parent_field_name}{field_name}[]",
                 schema_issues,
             )
+
+        # Extract metadata:
+        expected_metadata = expected_schema_dict[field_name].metadata
+
+        # Update observed metadata with expected metadata:
+        field.metadata = expected_metadata
 
     return schema_issues
