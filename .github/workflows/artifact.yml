@@ -34,7 +34,7 @@ jobs:
         run: "gcloud info"
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3.4.0
+        uses: docker/setup-qemu-action@v3.6.0
         with:
           image: tonistiigi/binfmt:qemu-v7.0.0-28
 
