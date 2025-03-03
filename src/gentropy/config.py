@@ -284,6 +284,7 @@ class LocusToGeneConfig(StepConfig):
     hf_model_commit_message: str | None = "chore: update model"
     download_from_hub: bool = True
     cross_validate: bool = True
+    explain_predictions: bool | None = False
     _target_: str = "gentropy.l2g.LocusToGeneStep"
 
 
