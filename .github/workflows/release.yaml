@@ -41,7 +41,7 @@ jobs:
         id: semrelease
         with:
           github_token: ${{ steps.trigger-token.outputs.token }}
-      - uses: python-semantic-release/publish-action@v9.19.1
+      - uses: python-semantic-release/publish-action@v9.21.0
         if: ${{ steps.semrelease.outputs.released }} == 'true'
         with:
           github_token: ${{ steps.trigger-token.outputs.token }}
