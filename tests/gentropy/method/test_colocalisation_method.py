@@ -249,7 +249,7 @@ def test_coloc(mock_study_locus_overlap: StudyLocusOverlap) -> None:
                         "right_logBF": 10.5,
                         "left_beta": 0.5,
                         "right_beta": 0.2,
-                        "left_posteriorProbability": 0.36,
+                        "left_posteriorProbability": 0.09,
                         "right_posteriorProbability": 0.92,
                     },
                 },
@@ -297,9 +297,9 @@ def test_coloc_semantic(
     expected_coloc_pdf = expected_coloc_df.toPandas()
 
     if expected_coloc_pdf.empty:
-        assert (
-            observed_coloc_pdf.empty
-        ), f"Expected an empty DataFrame, but got:\n{observed_coloc_pdf}"
+        assert observed_coloc_pdf.empty, (
+            f"Expected an empty DataFrame, but got:\n{observed_coloc_pdf}"
+        )
     else:
         assert_frame_equal(
             observed_coloc_pdf,
@@ -366,12 +366,12 @@ def test_coloc_no_logbf(
         StudyLocusOverlap.get_schema(),
     )
     observed_coloc_df = Coloc.colocalise(observed_overlap).df
-    assert (
-        observed_coloc_df.select("h0").collect()[0]["h0"] > minimum_expected_h0
-    ), "COLOC should return a high h0 (no association) when the input data has irrelevant logBF."
-    assert (
-        observed_coloc_df.select("h4").collect()[0]["h4"] < maximum_expected_h4
-    ), "COLOC should return a low h4 (traits are associated) when the input data has irrelevant logBF."
+    assert observed_coloc_df.select("h0").collect()[0]["h0"] > minimum_expected_h0, (
+        "COLOC should return a high h0 (no association) when the input data has irrelevant logBF."
+    )
+    assert observed_coloc_df.select("h4").collect()[0]["h4"] < maximum_expected_h4, (
+        "COLOC should return a low h4 (traits are associated) when the input data has irrelevant logBF."
+    )
 
 
 def test_coloc_no_betas(spark: SparkSession) -> None:

@@ -111,7 +111,7 @@ class LocusToGeneStep:
         credible_set_path: str,
         feature_matrix_path: str,
         model_path: str | None = None,
-        features_list: list[str] | None,
+        features_list: list[str] | None = None,
         gold_standard_curation_path: str | None = None,
         variant_index_path: str | None = None,
         gene_interactions_path: str | None = None,
@@ -119,6 +119,7 @@ class LocusToGeneStep:
         l2g_threshold: float | None = None,
         hf_hub_repo_id: str | None = None,
         hf_model_commit_message: str | None = "chore: update model",
+        explain_predictions: bool | None = None,
     ) -> None:
         """Initialise the step and run the logic based on mode.
 
@@ -140,6 +141,7 @@ class LocusToGeneStep:
             l2g_threshold (float | None): An optional threshold for the L2G score to filter predictions. A threshold of 0.05 is recommended.
             hf_hub_repo_id (str | None): Hugging Face Hub repository ID. If provided, the model will be uploaded to Hugging Face.
             hf_model_commit_message (str | None): Commit message when we upload the model to the Hugging Face Hub
+            explain_predictions (bool | None): Whether to extract SHAP importances for the L2G predictions. This is computationally expensive.
 
         Raises:
             ValueError: If run_mode is not 'train' or 'predict'
@@ -151,7 +153,6 @@ class LocusToGeneStep:
 
         self.session = session
         self.run_mode = run_mode
-        self.model_path = model_path
         self.predictions_path = predictions_path
         self.features_list = list(features_list) if features_list else None
         self.hyperparameters = dict(hyperparameters)
@@ -164,6 +165,12 @@ class LocusToGeneStep:
         self.gold_standard_curation_path = gold_standard_curation_path
         self.gene_interactions_path = gene_interactions_path
         self.variant_index_path = variant_index_path
+        self.model_path = (
+            hf_hub_repo_id
+            if not model_path and download_from_hub and hf_hub_repo_id
+            else model_path
+        )
+        self.explain_predictions = explain_predictions
 
         # Load common inputs
         self.credible_set = StudyLocus.from_parquet(
@@ -279,19 +286,24 @@ class LocusToGeneStep:
         """
         if not self.predictions_path:
             raise ValueError("predictions_path must be provided for prediction mode")
-        predictions = L2GPrediction.from_credible_set(
-            self.session,
-            self.credible_set,
-            self.feature_matrix,
-            model_path=self.model_path,
-            hf_token=access_gcp_secret("hfhub-key", "open-targets-genetics-dev"),
-            download_from_hub=self.download_from_hub,
+        predictions = (
+            L2GPrediction.from_credible_set(
+                self.session,
+                self.credible_set,
+                self.feature_matrix,
+                model_path=self.model_path,
+                features_list=self.features_list,
+                hf_token=access_gcp_secret("hfhub-key", "open-targets-genetics-dev"),
+                download_from_hub=self.download_from_hub,
+            )
+            .filter(f.col("score") >= self.l2g_threshold)
+            .add_features(
+                self.feature_matrix,
+            )
         )
-        predictions.filter(
-            f.col("score") >= self.l2g_threshold
-        ).add_locus_to_gene_features(
-            self.feature_matrix,
-        ).df.coalesce(self.session.output_partitions).write.mode(
+        if self.explain_predictions:
+            predictions = predictions.explain()
+        predictions.df.coalesce(self.session.output_partitions).write.mode(
             self.session.write_mode
         ).parquet(self.predictions_path)
         self.session.logger.info("L2G predictions saved successfully.")
@@ -331,12 +343,10 @@ class LocusToGeneStep:
                     "hfhub-key", "open-targets-genetics-dev"
                 )
                 trained_model.export_to_hugging_face_hub(
-                    # we upload the model in the filesystem
+                    # we upload the model saved in the filesystem
                     self.model_path.split("/")[-1],
                     hf_hub_token,
-                    data=trained_model.training_data._df.drop(
-                        "goldStandardSet", "geneId"
-                    ).toPandas(),
+                    data=trained_model.training_data._df.toPandas(),
                     repo_id=self.hf_hub_repo_id,
                     commit_message=self.hf_model_commit_message,
                 )
