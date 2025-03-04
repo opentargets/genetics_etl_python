@@ -270,13 +270,16 @@ class LocusToGeneConfig(StepConfig):
     )
     hyperparameters: dict[str, Any] = field(
         default_factory=lambda: {
-            "n_estimators": 100,
             "max_depth": 10,
-            "ccp_alpha": 0,
-            "learning_rate": 0.1,
-            "min_samples_leaf": 5,
-            "min_samples_split": 5,
-            "subsample": 1,
+            "learning_rate": 0.01,
+            "max_iter": 500,
+            "min_samples_leaf": 20,
+            "l2_regularization": 1.0,
+            "max_bins": 255,
+            "scoring": "roc_auc",
+            "early_stopping": True,
+            "n_iter_no_change": 10,
+            "validation_fraction": 0.1,
         }
     )
     wandb_run_name: str | None = None

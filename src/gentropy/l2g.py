@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 import pyspark.sql.functions as f
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
 from wandb.sdk.wandb_login import login as wandb_login
 
 from gentropy.common.schemas import compare_struct_schemas
@@ -322,7 +322,7 @@ class LocusToGeneStep:
 
         # Instantiate classifier and train model
         l2g_model = LocusToGeneModel(
-            model=GradientBoostingClassifier(random_state=42, loss="log_loss"),
+            model=HistGradientBoostingClassifier(random_state=42, loss="log_loss"),
             hyperparameters=self.hyperparameters,
             features_list=self.features_list,
         )
