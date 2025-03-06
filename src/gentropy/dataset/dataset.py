@@ -8,7 +8,7 @@ from enum import Enum
 from functools import reduce
 from typing import TYPE_CHECKING, Any
 
-from pyspark.sql import DataFrame
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as f
 from pyspark.sql import types as t
 from pyspark.sql.window import Window
@@ -186,8 +186,11 @@ class Dataset(ABC):
         attrs = {k: v for k, v in self.__dict__.items() if k != "_df"}
         return self.__class__(_df=filtered_df, **attrs)
 
-    def validate_schema(self: Dataset) -> None:
+    def validate_schema(self: Dataset, propagate_metadata: bool = True) -> None:
         """Validate DataFrame schema against expected class schema.
+
+        Args:
+            propagate_metadata (bool): If True, propagates metadata from the expected schema to the DataFrame schema
 
         Raises:
             SchemaValidationError: If the DataFrame schema does not match the expected schema
@@ -199,6 +202,12 @@ class Dataset(ABC):
         if discrepancies := compare_struct_schemas(observed_schema, expected_schema):
             raise SchemaValidationError(
                 f"Schema validation failed for {type(self).__name__}", discrepancies
+            )
+
+        # if the schema validation is successful, we enforce the schema:
+        if propagate_metadata:
+            self._df = SparkSession.getActiveSession().createDataFrame(
+                self._df.rdd, observed_schema
             )
 
     def valid_rows(self: Self, invalid_flags: list[str], invalid: bool = False) -> Self:
